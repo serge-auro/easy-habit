@@ -1,6 +1,7 @@
 import telebot
 from telebot import types
 from config import BOT_TOKEN
+from actions import * # импортируем функции из actions.py
 
 bot = telebot.TeleBot(BOT_TOKEN)
 start_message = 'Привет! Я помощник, который поможет вам отслеживать и поддерживать свои ежедневные привычки.'
@@ -41,6 +42,14 @@ def status(message):
     keyboard = create_keyboard(['done', 'menu'])
     bot.send_message(message.chat.id, 'Статус', reply_markup=keyboard)
     # функция get_habit_status() для получения статуса привычек пользователя
+
+
+# Обработчик команды 'report' / Handler for "report" command
+@bot.message_handler('report')
+def report(message):
+    keyboard = create_keyboard(['menu'])
+    bot.send_message(message.chat.id, 'Отчеты', reply_markup=keyboard)
+    # функция report() для получения отчета о выполненных привычках
 
 
 # Обработчик команды 'edit' / Handler for "edit" command
