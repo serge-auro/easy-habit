@@ -4,109 +4,90 @@ from config import BOT_TOKEN
 from actions import * # импортируем функции из actions.py
 
 bot = telebot.TeleBot(BOT_TOKEN)
-start_message = 'Привет! Я помощник, который поможет вам отслеживать и поддерживать свои ежедневные привычки.'
-help_message = 'Здесь будет список доступных команд и описание их функций.'
 
 # Словарь кнопок
 buttons_dict = {
-    'menu': 'В главное Меню',
+    'menu': 'На главную',
     'status': 'Статус',
     'report': 'Отчеты',
-    'edit': 'Редактировать',
-    'add': 'Добавить',
-    'delete': 'Удалить',
-    'done': 'Отметить V',
+    'edit_habit': 'Редактировать',
+    'new_habit': 'Добавить',
+    'del_habit': 'Удалить',
+    'mark_habit': 'Отметить V',
     'habits': 'Привычки'
 }
 
-# Функция для создания клавиатуры с выбранными кнопками
-def create_keyboard(button_keys):
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    for key in button_keys:
-        if key in buttons_dict:
-            keyboard.add(types.KeyboardButton(buttons_dict[key]))
-    return keyboard
+# Функция для создания inline клавиатуры
+def create_inline_keyboard(button_keys):
+  keyboard = types.InlineKeyboardMarkup(row_width=2)  # Устанавливаем ширину ряда равной 2
+  buttons = []
+  for key in button_keys:
+      if key in buttons_dict:
+          button_text = buttons_dict[key]
+          callback_data = key  # используем ключ словаря как callback_data
+          buttons.append(types.InlineKeyboardButton(text=button_text, callback_data=callback_data))
+  # Добавляем кнопки по две в ряд
+  keyboard.add(*buttons)  # Распаковываем список кнопок
+  return keyboard
 
 
-# Обработчик команды "start" / Handler for "start" command (пока не реализовано)
+# Обработчики inline-кнопок
+@bot.callback_query_handler(func=lambda call: call.data == 'status')
+def handle_status(call):
+    # TODO: Добавьте здесь функционал для статуса
+    keyboard = create_inline_keyboard(['new_habit', 'del_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Ваш текущий статус привычек', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'report')
+def handle_report(call):
+    # TODO: Добавьте здесь функционал для отчетов
+    keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
+    bot.send_message(call.message.chat.id, 'Отчет', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'edit_habit')
+def handle_edit_habit(call):
+    # TODO: Добавьте здесь функционал для редактирования привычки
+    keyboard = create_inline_keyboard(['new_habit', 'del_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Редактировать', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
+def handle_new_habit(call):
+    # TODO: Добавьте здесь функционал для добавления новой привычки
+    keyboard = create_inline_keyboard(['edit_habit', 'del_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Добавить', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'del_habit')
+def handle_del_habit(call):
+    # TODO: Добавьте здесь функционал для удаления привычки
+    keyboard = create_inline_keyboard(['edit_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Удалить', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
+def handle_mark_habit(call):
+    # TODO: Добавьте здесь функционал для отметки привычки
+    keyboard = create_inline_keyboard(['status', 'edit_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Отметить V', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'habits')
+def handle_habits(call):
+    # TODO: Добавьте здесь функционал для просмотра всех привычек
+    keyboard = create_inline_keyboard(['new_habit', 'edit_habit', 'del_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Привычки', reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'menu')
+def handle_menu(call):
+    # кнопка для возврата в главное меню
+    keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
+    bot.send_message(call.message.chat.id, 'На главную', reply_markup=keyboard)
+
 @bot.message_handler(commands=['start'])
-def start_message(message):
-    keyboard = create_keyboard(['status', 'edit', 'done'])
+def handle_start(message):
+    keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
     bot.send_message(message.chat.id, 'Привет! Я помощник, который поможет вам отслеживать и поддерживать свои ежедневные привычки.', reply_markup=keyboard)
-    # функция init_user() для записи в базу данных информации о пользователе
 
-
-# Обработчик команды 'status' / Handler for "status" command
-@bot.message_handler('status')
-def status(message):
-    keyboard = create_keyboard(['done', 'menu'])
-    bot.send_message(message.chat.id, 'Статус', reply_markup=keyboard)
-    # функция get_habit_status() для получения статуса привычек пользователя
-
-
-# Обработчик команды 'report' / Handler for "report" command
-@bot.message_handler('report')
-def report(message):
-    keyboard = create_keyboard(['menu'])
-    bot.send_message(message.chat.id, 'Отчеты', reply_markup=keyboard)
-    # функция report() для получения отчета о выполненных привычках
-
-
-# Обработчик команды 'edit' / Handler for "edit" command
-@bot.message_handler('edit')
-def edit(message):
-    keyboard = create_keyboard(['add', 'delete', 'menu'])
-    bot.send_message(message.chat.id, 'Редактировать', reply_markup=keyboard)
-    bot.delete_message(message.chat.id, message.message_id)
-    # просто отправка сообщения с клавиатурой
-
-
-# Обработчик команды 'add' / Handler for "add" command
-@bot.message_handler('add')
-def add(message):
-    keyboard = create_keyboard(['edit', 'delete', 'menu'])
-    bot.send_message(message.chat.id, 'Добавить', reply_markup=keyboard)
-    # функция edit_habit() для добавления привычки пользователя
-
-
-# Обработчик команды 'delete' / Handler for "delete" command
-@bot.message_handler('delete')
-def delete(message):
-    keyboard = create_keyboard(['edit', 'menu'])
-    bot.send_message(message.chat.id, 'Удалить', reply_markup=keyboard)
-    # функция edit_habit() для удаления привычки пользователя
-
-
-# Обработчик команды 'done' / Handler for "done" command
-@bot.message_handler('done')
-def done(message):
-    keyboard = create_keyboard(['status', 'edit', 'done', 'menu'])
-    bot.send_message(message.chat.id, 'Отметить V', reply_markup=keyboard)
-    # функция mark_habit() для отметки привычки пользователя как выполненной
-
-
-# Обработчик команды 'habits' / Handler for "habits" command
-@bot.message_handler('habits')
-def habits(message):
-    keyboard = create_keyboard(['add', 'edit', 'delete', 'menu'])
-    bot.send_message(message.chat.id, 'Привычки', reply_markup=keyboard)
-    bot.delete_message(message.chat.id, message.message_id)
-    # просто отправка сообщения с клавиатурой
-
-
-# Обработчик команды 'menu' / Handler for "menu" command
-@bot.message_handler('menu')
-def menu(message):
-    keyboard = create_keyboard(['status', 'edit', 'done'])
-    bot.send_message(message.chat.id, 'В главное Меню', reply_markup=keyboard)
-    bot.delete_message(message.chat.id, message.message_id)
-    # просто отправка сообщения с клавиатурой
-
-
-# Обработчик команды "help" / Handler for "help" command
 @bot.message_handler(commands=['help'])
-def help(message):
-    keyboard = create_keyboard(['status', 'habits', 'done'])
-    bot.send_message(message.chat.id, help_message, reply_markup=keyboard)
+def handle_help(message):
+    keyboard = create_inline_keyboard(['status', 'habits', 'mark_habit'])
+    bot.send_message(message.chat.id, 'Здесь будет список доступных команд и описание их функций.', reply_markup=keyboard)
 
 bot.polling(none_stop=True)
