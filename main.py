@@ -1,6 +1,8 @@
 import telebot
 
 from config import BOT_TOKEN
+from actions import * # импортируем функции из actions.py
+
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
