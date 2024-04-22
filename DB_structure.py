@@ -27,7 +27,7 @@ def init_db():
             (id INTEGER PRIMARY KEY autoincrement NOT NULL,
              user_id INTEGER,
              habit_id INTEGER,
-             active BOOLEAN NOT NULL DEFAULT 0,
+             active BOOLEAN NOT NULL DEFAULT 1,
              frequency_name TEXT CHECK(frequency_name IN ('ежедневно', 'еженедельно', 'ежемесячно')),
              frequency_count INTEGER,
              FOREIGN KEY (user_id) REFERENCES users(id),
