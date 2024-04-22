@@ -2,7 +2,7 @@ import sqlite3
 def add_info():
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO users (id, creation_date) VALUES (?,?)",
+    cur.execute("INSERT INTO user (id, creation_date) VALUES (?,?)",
                 (1234567890, '2024-04-22'))
 
     cur.execute("INSERT INTO habit (name, description) VALUES (?,?)",
