@@ -5,6 +5,7 @@ from actions import * # импортируем функции из actions.py
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+
 # Словарь кнопок
 buttons_dict = {
     'menu': 'На главную',
@@ -16,6 +17,7 @@ buttons_dict = {
     'mark_habit': 'Отметить V',
     'habits': 'Привычки'
 }
+
 
 # Функция для создания inline клавиатуры
 def create_inline_keyboard(button_keys):
