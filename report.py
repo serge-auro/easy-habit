@@ -30,10 +30,10 @@ def report(user_id, habit_id, period):
     c = conn.cursor()
 
     # Определение даты начала периода
-    if period == 'last week':
-        c.execute("SELECT date('now', '-7 day')")
-    elif period == 'last month':
-        c.execute("SELECT date('now', '-1 month')")
+    if period == 'Прошедшая неделя':
+        c.execute("Введите числа ('now', '-7 day')")
+    elif period == 'Прошедшиц месяц':
+        c.execute("Введите число ('now', '-1 month')")
     start_date = c.fetchone()[0]
 
     # Получение данных из таблиц
@@ -49,10 +49,10 @@ def report(user_id, habit_id, period):
     conn.close()
 
     if not results:
-        print("No records found.")
+        print("Не найдено записей.")
     else:
         for result in results:
-            print(f"Habit: {result[0]}, Date Completed: {result[1]}")
+            print(f"Привычка: {result[0]}, Дата: {result[1]}")
 
 
 # Пример использования функции
