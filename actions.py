@@ -42,7 +42,7 @@ def user_notify():
 def init_user(user_id): #где user_id = message.chat.id
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO users (id, creation_date) VALUES (?, ?)",
+    cur.execute("INSERT INTO user (id, creation_date) VALUES (?, ?)",
                 (user_id, datetime.now().strftime('%Y-%m-%d')))
     conn.commit()
     conn.close()
@@ -65,7 +65,7 @@ def init_habit(name, description):
 # frequency_count (количество повторений привычки за период)
 # должны быть заданы юзером в ТГ
 
-def assign_habit(user_id, habit_id, frequency_name, frequency_count):
+def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("INSERT INTO user_habit (user_id, habit_id, frequency_name, frequency_count) VALUES (?, ?, ?, ?)",
@@ -137,7 +137,7 @@ def habit_status(user_id):
 # frequency_name (ежедневно, еженедельно, ежемесячно) вводит пользователь в ТГ
 # frequency_count (количество повторений привычки за период) вводит пользователь в ТГ
 
-def edit_habit(user_id, habit_id, frequency_name, frequency_count):
+def edit_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("UPDATE user_habit SET frequency_name = ?, frequency_count = ? WHERE user_id = ? AND habit_id = ?",
