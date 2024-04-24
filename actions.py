@@ -73,9 +73,11 @@ def assign_habit(user_id, habit_id, frequency_name, frequency_count):
 
                  # Значение user_id = message.chat.id, habit_id = id заданной привычки из таблицы habit
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
-    bot.send_message(user_id, f"Вы добавили себе привычку {cur.fetchone()[0]}, которую хотите выполнять {frequency_name}, {frequency_count} раз за период")
+    habit_name = cur.fetchone()[0]
+    message_text = f"Вы добавили себе привычку {habit_name}, которую хотите выполнять {frequency_name}, {frequency_count} раз за период"
     conn.commit()
     conn.close()
+    return message_text
 
 # Метод вызова списка всех доступных для выбора привычек
 # (пока что у нас их 5). Входной параметр id юзера из ТГ: user_id = message.chat.id
@@ -85,13 +87,14 @@ def list_habits(user_id):
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
     habits = cur.fetchall()
-    bot.send_message(user_id, "Cписок привычек:")
+    message_text = "Cписок привычек:\n")
     for habit in habits:
-        bot.send_message(user_id, f"{habit[0]}. {habit[1]}: {habit[2]}")
+        message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
     # возвращает список с именами и описаниями привычек
     # 1 строка = 1 привычка
     # надо посмотреть, как это выводится в ТГ
     conn.close()
+    return message_text
 
 # Запрос для получения названия и описания всех активных привычек пользователя
 #Входной параметр id юзера из ТГ: user_id = message.chat.id
@@ -113,14 +116,16 @@ def habit_status(user_id):
     ''', (user_id,))
     i=1 #чтобы пронумеровать активные привычки
     habits = cur.fetchall()
+    output_message = ""  # Инициализация переменной для сбора текста сообщения
     if habits: # если список активных привычек не пуст
-        bot.send_message(user_id, "Список Ваших подключенных привычек:")
+        output_message += "Список Ваших подключенных привычек:\n"
         for habit in habits:
-            bot.send_message(user_id, f"{i}. {habit[0]}: {habit[1]}")
+            output_message += f"{i}. {habit[0]}: {habit[1]}\n"
             i += 1
     else: # если список активных привычек пуст
-        bot.send_message(user_id, "У Вас нет подключенных привычек")
+        output_message = "У Вас нет подключенных привычек"
     conn.close()
+    return output_message
 
 #Метод редактирования привычки - возможность изменения периодичночти frequency_name
 #и количества повторений привычки за период frequency_count.
@@ -135,9 +140,11 @@ def edit_habit(user_id, habit_id, frequency_name, frequency_count):
     cur.execute("UPDATE user_habit SET frequency_name = ?, frequency_count = ? WHERE user_id = ? AND habit_id = ?",
                 (frequency_name, frequency_count, user_id, habit_id))
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
-    bot.send_message(user_id, f"Вы изменили параметры привычки {cur.fetchone()[0]} на {frequency_name}, {frequency_count} раз за период")
+    habit_name = cur.fetchone()[0]
+    message_text = f"Вы изменили параметры привычки {habit_name} на {frequency_name}, {frequency_count} раз за период"
     conn.commit()
     conn.close()
+    return message_text
 
 #Метод удаления привычки - меняет столбец user_habit.active на 0
 #и количества повторений привычки за период frequency_count.
@@ -150,9 +157,11 @@ def delete_habit(user_id, habit_id):
     cur.execute("DELETE FROM user_habit WHERE user_id = ? AND habit_id = ?",
                 (user_id, habit_id))
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
-    bot.send_message(user_id,f"Вы удалили привычку {cur.fetchone()[0]}")
+    habit_name = cur.fetchone()[0]
+    output_message = f"Вы удалили привычку {habit_name}"
     conn.commit()
     conn.close()
+    return output_message
 
 
 
@@ -186,6 +195,7 @@ def delete_habit(user_id, habit_id):
 def mark_habit(user_id, habit_id, mark_date, count=1):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
+    output_message = ""
     try:
         #получаем название привычки
         cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
@@ -245,15 +255,15 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
             # Считаем количество выполнений в заданный период. Если current_period_count = None, то возвращаем 0
 
             if current_period_count >= set_frequency_count:
-                bot.send_message(user_id, f"Привычка {habit_name} уже выполнена необходимое количество раз ({set_frequency_count}) "
-                    f"за период '{set_frequency_name}' с {period_start_str} по {mark_date}.")
-                return
+                output_message += (f"Привычка {habit_name} уже выполнена необходимое количество раз ({set_frequency_count}) "
+                                  f"за период '{set_frequency_name}' с {period_start_str} по {mark_date}.")
+                return output_message
 
             new_count = current_period_count + count
             if new_count > set_frequency_count:
-                bot.send_message(
-                    f"Вы не можете отметить привычку {habit_name} более {set_frequency_count} раз за период. Текущее количество: {current_period_count}.")
-                return
+                output_message += (f"Вы не можете отметить привычку {habit_name} более {set_frequency_count} раз за период."
+                                   f" Текущее количество: {current_period_count}.")
+                return output_message
 
             # Выполнение запроса на получение последней даты выполнения привычки
             cur.execute('''
@@ -272,10 +282,10 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
                             INSERT INTO user_habit_history (user_id, habit_id, mark_date, mark_count)
                             VALUES (?, ?, ?, ?)
                         ''', (user_id, habit_id, mark_date, count))
-                bot.send_message (user_id,
-                    f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз за период '{set_frequency_name}' с {period_start_str} по {mark_date}.")
+                output_message += (f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз "
+                                   f"за период '{set_frequency_name}' с {period_start_str} по {mark_date}.\n")
                 if current_period_count + count >= set_frequency_count:
-                    bot.send_message (user_id, f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!")
+                    output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
 
 
             else:
@@ -287,22 +297,23 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
                                      SET mark_count = ?
                                      WHERE id = ?
                                  ''', (new_count, user_habit_history_id))
-                bot.send_message (user_id,
-                    f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз за период '{set_frequency_name}' с {period_start_str} по {mark_date}.")
+                output_message += (f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз"
+                                   f" за период '{set_frequency_name}' с {period_start_str} по {mark_date}.\n")
                 if new_count >= set_frequency_count:
-                    bot.send_message (user_id, (f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!")
+                    output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
+
         else:
             # Если записи нет, создаем новую с mark_count = count, по умолчанию 1
             cur.execute('''
                 INSERT INTO user_habit_history (user_id, habit_id, mark_date, mark_count)
                 VALUES (?, ?, ?, ?)
             ''', (user_id, habit_id, mark_date, count))
-            bot.send_message (user_id,
-                        f"Ваша привычка {habit_name} была выполнена {count} раз за период '{set_frequency_name}'.")
+            output_message += f"Ваша привычка {habit_name} была выполнена {count} раз за период '{set_frequency_name}'.\n"
             if count >= set_frequency_count:
-                bot.send_message (user_id, (f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!")
+                output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
 
         conn.commit()
+        return output_message
     finally:
         conn.close()
 
