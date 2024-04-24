@@ -107,23 +107,28 @@ def list_habits(user_id):
 
 def habit_status(user_id):
     conn = sqlite3.connect('easy_habit.db')
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT habit.name, habit.description
-        FROM habit 
-        INNER JOIN user_habit ON user_habit.habit_id = habit.id
-        WHERE user_habit.user_id = ? AND user_habit.active = 1
-    ''', (user_id,))
+    try:
+        cur = conn.cursor()
+        cur.execute('''
+            SELECT habit.name, habit.description
+            FROM habit 
+            INNER JOIN user_habit ON user_habit.habit_id = habit.id
+            WHERE user_habit.user_id = ? AND user_habit.active = 1
+        ''', (user_id,))
 
-    habits = cur.fetchall()
-    output_dictionary = {}  # Инициализация пустого словаря для вывода
-    if habits: # если список активных привычек не пуст
+        habits = cur.fetchall()
+
+        if not habits: # если список активных привычек пуст
+            return None
+
+        output_dictionary = {}  # Инициализация пустого словаря для вывода
+        # если список активных привычек не пуст
         for habit in habits:
             output_dictionary[habit[0]] = habit[1]
-    #else: # если список активных привычек пуст
-        #output_dictionary['error'] = "У Вас нет подключенных привычек"
-    conn.close()
-    return output_dictionary
+        return output_dictionary
+    finally:
+        conn.close()
+
 
 #Метод редактирования привычки - возможность изменения периодичночти frequency_name
 #и количества повторений привычки за период frequency_count.
