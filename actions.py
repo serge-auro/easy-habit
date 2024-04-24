@@ -114,18 +114,16 @@ def habit_status(user_id):
         INNER JOIN user_habit ON user_habit.habit_id = habit.id
         WHERE user_habit.user_id = ? AND user_habit.active = 1
     ''', (user_id,))
-    i=1 #чтобы пронумеровать активные привычки
+
     habits = cur.fetchall()
-    output_message = ""  # Инициализация переменной для сбора текста сообщения
+    output_dictionary = {}  # Инициализация пустого словаря для вывода
     if habits: # если список активных привычек не пуст
-        output_message += "Список Ваших подключенных привычек:\n"
         for habit in habits:
-            output_message += f"{i}. {habit[0]}: {habit[1]}\n"
-            i += 1
-    else: # если список активных привычек пуст
-        output_message = "У Вас нет подключенных привычек"
+            output_dictionary[habit[0]] = habit[1]
+    #else: # если список активных привычек пуст
+        #output_dictionary['error'] = "У Вас нет подключенных привычек"
     conn.close()
-    return output_message
+    return output_dictionary
 
 #Метод редактирования привычки - возможность изменения периодичночти frequency_name
 #и количества повторений привычки за период frequency_count.
