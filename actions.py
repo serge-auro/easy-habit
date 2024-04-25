@@ -157,7 +157,8 @@ def edit_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
 def delete_habit(user_id, habit_id):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("DELETE FROM user_habit WHERE user_id = ? AND habit_id = ?",
+    cur.execute("  UPDATE user_habit SET active = 0 "
+                "WHERE user_id = ? AND habit_id = ?",
                 (user_id, habit_id))
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
     habit_name = cur.fetchone()[0]
@@ -166,6 +167,11 @@ def delete_habit(user_id, habit_id):
     conn.close()
     return output_message
 
+cur.execute('''
+UPDATE user_habit
+SET frequency_count = 10
+WHERE user_id = 1 AND habit_id = 2
+''')
 
 
 # Функция для отметки привычки
