@@ -2,9 +2,10 @@ import telebot
 from telebot import types
 from config import BOT_TOKEN
 from actions import *
-from db_structure import *
+import db
 
-db_structure.init_db()
+
+db.init_db()
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Создаем временное хранилище для данных запроса

@@ -6,33 +6,6 @@ import telebot
 PERIOD = ("month", "week")
 FREQUENCY = ("ежедневно", "еженедельно", "ежемесячно")
 
-
-def init_user(user_id):
-    pass
-
-
-def get_habit_status(user_id):
-    pass
-
-
-def report(user_id, habit_id, period: PERIOD):
-    pass
-
-
-def edit_habit(user_id, habit_id, active: bool, frequency_name: FREQUENCY, frequency_count):
-    pass
-
-
-def mark_habit(user_id, habit_id):
-    pass
-
-
-def user_notify():
-    pass
-
-
-
-
 #Метод создания нового юзера.  У нового юзера из ТГ достается его telegram id,
 # и записывается в таблицу users как users.id
 # (где users - название таблицы, id - название столбца)
@@ -87,7 +60,7 @@ def list_habits(user_id):
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
     habits = cur.fetchall()
-    message_text = "Cписок привычек:\n")
+    message_text = "Cписок привычек:\n"
     for habit in habits:
         message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
     # возвращает список с именами и описаниями привычек
