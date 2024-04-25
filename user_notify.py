@@ -1,56 +1,31 @@
-import schedule
-import time
-from telegram import Bot
-
-# Инициализация Telegram бота
-TOKEN = 'телеграм-бот токен '
-bot = Bot(token=TOKEN)
 import sqlite3
 
-def init_reminders_table():
+
+def notify_all_active_users():
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS reminders (
-            id INTEGER PRIMARY KEY autoincrement NOT NULL,
-            user_id INTEGER,
-            habit_id INTEGER,
-            reminder_time TIME,
-            message TEXT,
-            FOREIGN KEY (user_id) REFERENCES user(id),
-            FOREIGN KEY (habit_id) REFERENCES habit(id)
-        )
-    ''')
-    conn.commit()
+
+    cur.execute("SELECT id FROM user WHERE active = 1")
+    active_users = cur.fetchall()
+
+    for user in active_users:
+        user_id = user[0]
+        notify_user_habits(user_id)
+
     conn.close()
 
-init_reminders_table()
 
-def add_reminder(user_id, habit_id, reminder_time, message):
+def notify_user_habits(user_id):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO reminders (user_id, habit_id, reminder_time, message)
-        VALUES (?, ?, ?, ?)
-    ''', (user_id, habit_id, reminder_time, message))
-    conn.commit()
+
+    cur.execute("SELECT habit_id, frequency_name, frequency_count FROM user_habit WHERE user_id = ? AND active = 1",
+                (user_id,))
+    user_habits = cur.fetchall()
+
+    for habit in user_habits:
+        habit_id, frequency_name, frequency_count = habit
+        # При том, что функция user_notify уже определена в main.py
+        user_notify(user_id, habit_id, frequency_name, frequency_count)
+
     conn.close()
-
-def send_reminders():
-    conn = sqlite3.connect('easy_habit.db')
-    cur = conn.cursor()
-    current_time = time.strftime('%H:%M')
-    cur.execute('SELECT user_id, message FROM reminders WHERE reminder_time=?', (current_time,))
-    reminders = cur.fetchall()
-    for reminder in reminders:
-        user_id, message = reminder
-        chat_id = get_telegram_chat_id(user_id)  # Предполагаем, что у вас есть функция для получения chat_id по user_id
-        bot.send_message(chat_id=chat_id, text=message)
-    conn.close()
-
-schedule.every().minute.do(send_reminders)
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
-
