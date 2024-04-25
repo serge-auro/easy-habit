@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 from config import BOT_TOKEN
 from actions import *
-from DB_structure import *
+from db import *
 
 init_db()
 
