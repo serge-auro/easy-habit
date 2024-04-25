@@ -82,7 +82,7 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
 # Метод вызова списка всех доступных для выбора привычек
 # (пока что у нас их 5). Входной параметр id юзера из ТГ: user_id = message.chat.id
 
-def list_habits(user_id):
+def list_habits():
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
@@ -105,12 +105,13 @@ def list_habits(user_id):
 # "У Вас нет подключенных привычек"
 # если список не пуст, то циклом выводим сообщением ТГ привычки, каждая с новой строки
 
+
 def habit_status(user_id):
     conn = sqlite3.connect('easy_habit.db')
     try:
         cur = conn.cursor()
         cur.execute('''
-            SELECT habit.name, habit.description
+            SELECT habit.name, habit.description, user_habit.frequency_name, user_habit.frequency_count
             FROM habit 
             INNER JOIN user_habit ON user_habit.habit_id = habit.id
             WHERE user_habit.user_id = ? AND user_habit.active = 1
@@ -118,13 +119,16 @@ def habit_status(user_id):
 
         habits = cur.fetchall()
 
-        if not habits: # если список активных привычек пуст
+        if not habits:  # если список активных привычек пуст
             return None
 
         output_dictionary = {}  # Инициализация пустого словаря для вывода
-        # если список активных привычек не пуст
         for habit in habits:
-            output_dictionary[habit[0]] = habit[1]
+            output_dictionary[habit[0]] = {
+                'description': habit[1],
+                'frequency': habit[2],
+                'count': habit[3]
+            }
         return output_dictionary
     finally:
         conn.close()
