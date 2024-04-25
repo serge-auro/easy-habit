@@ -60,7 +60,9 @@ def list_habits(user_id):
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
     habits = cur.fetchall()
+
     message_text = "Cписок привычек:\n"
+
     for habit in habits:
         message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
     # возвращает список с именами и описаниями привычек
@@ -292,16 +294,3 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
         return output_message
     finally:
         conn.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
