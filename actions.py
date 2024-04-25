@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 from datetime import timedelta
-import telebot
+import json
 
 PERIOD = ("month", "week")
 FREQUENCY = ("ежедневно", "еженедельно", "ежемесячно")
@@ -294,3 +294,50 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
         return output_message
     finally:
         conn.close()
+
+def init_sessions_db():
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                state TEXT,
+                last_interaction REAL,
+                data TEXT
+            )
+        ''')
+        conn.commit()
+
+def save_session(user_id, state, data):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                INSERT INTO sessions (user_id, state, data) VALUES (?, ?, ?)
+            ''', (user_id, state, json.dumps(data)))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+
+def update_session(session_id, state, data):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE sessions SET state = ?, data = ? WHERE session_id = ?
+            ''', (state, json.dumps(data), session_id))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+
+def get_session(user_id):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT * FROM sessions WHERE user_id = ?', (user_id,))
+            session = cursor.fetchone()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            session = None
+    return session
