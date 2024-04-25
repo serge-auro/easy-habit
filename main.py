@@ -2,14 +2,11 @@ import telebot
 from telebot import types
 from config import BOT_TOKEN
 from actions import *
-import db
+from db import *
 
+init_db()
 
-db.init_db()
 bot = telebot.TeleBot(BOT_TOKEN)
-
-# Создаем временное хранилище для данных запроса
-temp_data_store = {}
 
 start_message = 'Привет! Я помощник, который поможет вам отслеживать и поддерживать свои ежедневные привычки.'
 help_message = 'Здесь будет список доступных команд и описание их функций.'
@@ -41,8 +38,16 @@ def handle_menu(call):
 # Обработчик для вывода статуса текущих привычек
 @bot.callback_query_handler(func=lambda call: call.data == 'status')
 def handle_status(call):
-    respond_message = habit_status(call.from_user.id)
-    keyboard = create_inline_keyboard(['new_habit', 'del_habit', 'menu'])
+    habits_info = habit_status(call.from_user.id)
+    keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'menu'])
+
+    if not habits_info:
+        bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек или произошла ошибка.',
+                         reply_markup=keyboard)
+        return
+
+    # Создание одной строки с описанием всех привычек
+    respond_message = "\n".join([f"{habit} - {description}" for habit, description in habits_info.items()])
     bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
 
 # Обработчик для вывода отчета
@@ -84,19 +89,24 @@ def request_habit_repetition_input(call):
     _, selected_habit, frequency = call.data.split('_')[1:4]
     message_text = f"Введите количество повторений для '{selected_habit}' (от 1 до 30)."
     bot.send_message(call.message.chat.id, message_text, reply_markup=types.ForceReply(selective=True))
-    temp_data_store[call.message.chat.id] = {'habit': selected_habit, 'frequency': frequency}
+    # Сохранение или обновление сессии
+    session_data = {'habit': selected_habit, 'frequency': frequency}
+    update_session(call.message.chat.id, 'awaiting_repetition_count', json.dumps(session_data))
+
 
 # Обработчик для текстовых ответов на запрос количества повторений
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите количество повторений"))
 def handle_repetition_count_input(message):
-    if message.chat.id in temp_data_store:
+    session_data = get_session(message.chat.id)
+    if session_data:
+        data = json.loads(session_data['data'])
         try:
             repetition_count = int(message.text)
             if 1 <= repetition_count <= 30:
-                habit_info = temp_data_store[message.chat.id]
-                update_habit(message.chat.id, habit_info['habit'], habit_info['frequency'], repetition_count)
-                bot.send_message(message.chat.id, f"Установлено {repetition_count} повторений в день для '{habit_info['habit']}'.")
-                del temp_data_store[message.chat.id]
+                edit_habit(message.chat.id, data['habit'], data['frequency'], repetition_count)
+                bot.send_message(message.chat.id, f"Установлено {repetition_count} повторений в день для '{data['habit']}'.")
+                # Обновление или завершение сессии
+                update_session(message.chat.id, 'completed', '{}')
             else:
                 bot.send_message(message.chat.id, "Введите число от 1 до 30.")
         except ValueError:
@@ -104,12 +114,20 @@ def handle_repetition_count_input(message):
     else:
         bot.send_message(message.chat.id, "Истекло время ожидания ввода, пожалуйста начните процесс заново.")
 
+
 # Обработчик для выбора добавления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
 def handle_new_habit(call):
-    # TODO: Добавьте здесь функционал для добавления новой привычки
-    keyboard = create_inline_keyboard(['edit_habit', 'del_habit', 'menu'])
-    bot.send_message(call.message.chat.id, 'Добавить', reply_markup=keyboard)
+    # TODO: обработка выбора привычки
+    pass
+
+
+# Обработчик для добавления выбранной привычки
+@bot.callback_query_handler(func=lambda call: call.data.startswith('add_'))
+def add_selected_habit(call):
+    selected_habit = call.data.split('_')[1]
+    assign_habit(call.from_user.id, selected_habit)
+    bot.send_message(call.message.chat.id, f"Привычка '{selected_habit}' добавлена.")
 
 # Обработчик для выбора удаления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'del_habit')
@@ -168,9 +186,13 @@ def handle_habits(call):
 # Обработчик для команды /start
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    init_user(message.chat.id)
-    keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
-    bot.send_message(message.chat.id, start_message, reply_markup=keyboard)
+    try:
+        init_user(message.chat.id)
+    except Exception as e:
+        print(e)
+    finally:
+        keyboard = create_inline_keyboard(['habits', 'status', 'new_habit'])
+        bot.send_message(message.chat.id, start_message, reply_markup=keyboard)
 
 
 # Обработчик для команды /help

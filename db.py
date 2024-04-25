@@ -51,6 +51,15 @@ def init_db():
         )
     ''')
 
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            state TEXT,
+            last_interaction REAL,
+            data TEXT
+        )
+    ''')
     conn.commit()
     conn.close()
 
