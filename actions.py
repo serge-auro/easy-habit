@@ -295,19 +295,6 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
     finally:
         conn.close()
 
-def init_sessions_db():
-    with sqlite3.connect('easy_habit.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id INTEGER PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                state TEXT,
-                last_interaction REAL,
-                data TEXT
-            )
-        ''')
-        conn.commit()
 
 def save_session(user_id, state, data):
     with sqlite3.connect('easy_habit.db') as conn:
