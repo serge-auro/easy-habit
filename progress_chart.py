@@ -50,7 +50,7 @@ def fetch_progress_data(user_id, period):
         elif freq_name == 'ежемесячно':
             target = freq_count
 
-        percentage_done = (total_done / target) * 100 if target != 0 else 0
+        percentage_done = min((total_done / target) * 100, 100) if target != 0 else 0
         results[name] = {'percentage_done': percentage_done, 'total_done': total_done, 'target': target}
 
     return results, start_date, end_date
