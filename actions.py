@@ -54,7 +54,7 @@ def init_user(user_id):  # где user_id = message.chat.id
 def init_habit(name, description):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO habit ( name, description) VALUES (?, ?)",
+    cur.execute("INSERT OR IGNORE INTO habit ( name, description) VALUES (?, ?)",
                 (name, description))
     conn.commit()
     conn.close()
