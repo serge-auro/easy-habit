@@ -43,7 +43,7 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("INSERT INTO user_habit (user_id, habit_id, frequency_name, frequency_count) VALUES (?, ?, ?, ?)",
-                (user_id, habit_id,frequency_name, frequency_count))
+                (user_id, habit_id, frequency_name, frequency_count))
 
                  # Значение user_id = message.chat.id, habit_id = id заданной привычки из таблицы habit
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
@@ -192,130 +192,41 @@ def delete_habit(user_id, habit_id):
 
 
 
-def mark_habit(user_id, habit_id, mark_date = datetime.now().strftime('%Y-%m-%d'), count=1):
+def mark_habit(user_id, habit_id, mark_date = datetime.now().date().strftime('%Y-%m-%d'), count = 1):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    output_message = ""
+
     try:
-        #получаем название привычки
-        cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
-        habit_name = cur.fetchone()[0]
-        #используем конструкцию try-finally, чтобы точно закрыть подключение к БД, если функция завершиться раньше
-        # Сначала проверяем, существует ли уже запись для данного пользователя, привычки и даты
-        # и сохраняем id записи, число выполнений и дату выполнения в
-        # переменные user_habit_history_id, current_count, current_date
+        # Проверяем наличие записи для данной привычки, пользователя и даты
         cur.execute('''
-            SELECT id, mark_count
-            FROM user_habit_history
+            SELECT id, mark_count FROM user_habit_history
             WHERE user_id = ? AND habit_id = ? AND mark_date = ?
         ''', (user_id, habit_id, mark_date))
         result = cur.fetchone()
+
         if result:
+            # Если запись найдена, увеличиваем mark_count
             user_habit_history_id, current_count = result
-        else:
-            user_habit_history_id, current_count = None, 0
-
-
-        # Проверяем, какую периодичность и частоту выполнения привычки за период пользователь установил
-        # в целях и сохраняем это в переменные set_frequency_name, set_frequency_count
-        cur.execute('''
-                    SELECT frequency_name, frequency_count
-                    FROM user_habit
-                    WHERE user_id = ? AND habit_id = ?
-                ''', (user_id, habit_id))
-        set_frequency = cur.fetchone()
-        if set_frequency:
-            set_frequency_name, set_frequency_count = set_frequency
-        else:
-            set_frequency_name, set_frequency_count = None, None
-
-        # Если запись существует, увеличиваем mark_count на count, по умолчанию count = 1,
-        # в зависимости от периода для привычек: Ежедневно, Еженедельно, Ежемесячно
-        if result:
-
-            mark_date_obj = datetime.strptime(mark_date, '%Y-%m-%d')
-            # Преобразование даты в объект datetime - вроде она в БД уже записана в формате %Y-%m-%d,
-            # но я не уверена, как они взаимодействуют, поэтому на всякий случай преобразуем дату
-            if set_frequency_name == 'ежедневно':
-                period_start = mark_date_obj
-            elif set_frequency_name == 'еженедельно':
-                period_start = mark_date_obj - timedelta(days=mark_date_obj.weekday())
-                # Понедельник текущей недели - вычитаем количество дней, соответствующее текущему дню недели
-            elif set_frequency_name == 'ежемесячно':
-                period_start = mark_date_obj.replace(day=1)  # День месяца изменяется на первый
-
-            period_start_str = period_start.strftime('%Y-%m-%d')# Преобразование даты в строку в формате %Y-%m-%d
-
+            new_count = current_count + count
             cur.execute('''
-                        SELECT SUM(mark_count)
-                        FROM user_habit_history
-                        WHERE user_id = ? AND habit_id = ? AND mark_date >= ?
-                    ''', (user_id, habit_id, period_start_str))
-            current_period_count = cur.fetchone()[0] or 0
-            # Считаем количество выполнений в заданный период. Если current_period_count = None, то возвращаем 0
-
-            if current_period_count >= set_frequency_count:
-                output_message += (f"Привычка {habit_name} уже выполнена необходимое количество раз ({set_frequency_count}) "
-                                  f"за период '{set_frequency_name}' с {period_start_str} по {mark_date}.")
-                return output_message
-
-            new_count = current_period_count + count
-            if new_count > set_frequency_count:
-                output_message += (f"Вы не можете отметить привычку {habit_name} более {set_frequency_count} раз за период."
-                                   f" Текущее количество: {current_period_count}.")
-                return output_message
-
-            # Выполнение запроса на получение последней даты выполнения привычки
-            cur.execute('''
-                SELECT MAX(mark_date)
-                FROM user_habit_history
-                WHERE user_id = ? AND habit_id = ?
-            ''', (user_id, habit_id))
-            completion = cur.fetchone()
-            last_completion_date = completion[0]
-            last_completion_date = datetime.strptime(last_completion_date, '%Y-%m-%d')
-            # last_completion_date_print = result[0] if result[0] is not None else "Привычка еще не была выполнена."
-            # print(f"Последняя дата выполнения привычки: {last_completion_date}")# выводим для проверки в консоли
-
-            if (set_frequency_name == 'еженедельно' or set_frequency_name == 'ежемесячно') and (mark_date != last_completion_date):
-                cur.execute( '''
-                            INSERT INTO user_habit_history (user_id, habit_id, mark_date, mark_count)
-                            VALUES (?, ?, ?, ?)
-                        ''', (user_id, habit_id, mark_date, count))
-                output_message += (f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз "
-                                   f"за период '{set_frequency_name}' с {period_start_str} по {mark_date}.\n")
-                if current_period_count + count >= set_frequency_count:
-                    output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
-
-
-            else:
-                #то есть в случаях, когда set_frequency_name == 'ежедневно'
-                # или ((set_frequency_name == 'еженедельно' or set_frequency_name == 'ежемесячно')
-                # and (mark_date == last_completion_date))):
-                cur.execute('''
-                                     UPDATE user_habit_history
-                                     SET mark_count = ?
-                                     WHERE id = ?
-                                 ''', (new_count, user_habit_history_id))
-                output_message += (f"Ваша привычка {habit_name} была выполнена {current_period_count + count} раз"
-                                   f" за период '{set_frequency_name}' с {period_start_str} по {mark_date}.\n")
-                if new_count >= set_frequency_count:
-                    output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
-
+                UPDATE user_habit_history
+                SET mark_count = ?
+                WHERE id = ?
+            ''', (new_count, user_habit_history_id))
         else:
-            # Если записи нет, создаем новую с mark_count = count, по умолчанию 1
+            # Если записи нет, добавляем новую
             cur.execute('''
                 INSERT INTO user_habit_history (user_id, habit_id, mark_date, mark_count)
                 VALUES (?, ?, ?, ?)
             ''', (user_id, habit_id, mark_date, count))
-            output_message += f"Ваша привычка {habit_name} была выполнена {count} раз за период '{set_frequency_name}'.\n"
-            if count >= set_frequency_count:
-                output_message += f"Вы достигли цели по выполнению привычки {habit_name} за период. Поздравляем!"
 
         conn.commit()
-        return output_message
+        return "OK"
+    except Exception as e:
+        return f"Произошла ошибка: {e}"
     finally:
         conn.close()
+
 
 def db_connection():
     """Устанавливает соединение с базой данных."""
