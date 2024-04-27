@@ -12,10 +12,10 @@ FREQUENCY = ("ежедневно", "еженедельно", "ежемесячн
 #также, функция datetime.now().strftime('%Y-%m-%d') записывает дату создания записи
 # о пользователе в таблицу users в столбец creation_date
 #по умолчанию статус active = 1 (столбец users.active)
-def init_user(user_id): #где user_id = message.chat.id
+def init_user(user_id):  # где user_id = message.chat.id
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO user (id, creation_date) VALUES (?, ?)",
+    cur.execute("INSERT OR IGNORE INTO user (id, creation_date) VALUES (?, ?)",
                 (user_id, datetime.now().strftime('%Y-%m-%d')))
     conn.commit()
     conn.close()
@@ -55,7 +55,7 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
 # Метод вызова списка всех доступных для выбора привычек
 # (пока что у нас их 5). Входной параметр id юзера из ТГ: user_id = message.chat.id
 
-def list_habits(user_id):
+def list_habits():
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
@@ -80,12 +80,13 @@ def list_habits(user_id):
 # "У Вас нет подключенных привычек"
 # если список не пуст, то циклом выводим сообщением ТГ привычки, каждая с новой строки
 
+
 def habit_status(user_id):
     conn = sqlite3.connect('easy_habit.db')
     try:
         cur = conn.cursor()
         cur.execute('''
-            SELECT habit.name, habit.description
+            SELECT habit.name, habit.description, user_habit.frequency_name, user_habit.frequency_count
             FROM habit 
             INNER JOIN user_habit ON user_habit.habit_id = habit.id
             WHERE user_habit.user_id = ? AND user_habit.active = 1
@@ -93,13 +94,16 @@ def habit_status(user_id):
 
         habits = cur.fetchall()
 
-        if not habits: # если список активных привычек пуст
+        if not habits:  # если список активных привычек пуст
             return None
 
         output_dictionary = {}  # Инициализация пустого словаря для вывода
-        # если список активных привычек не пуст
         for habit in habits:
-            output_dictionary[habit[0]] = habit[1]
+            output_dictionary[habit[0]] = {
+                'description': habit[1],
+                'frequency': habit[2],
+                'count': habit[3]
+            }
         return output_dictionary
     finally:
         conn.close()
@@ -132,7 +136,8 @@ def edit_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
 def delete_habit(user_id, habit_id):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("DELETE FROM user_habit WHERE user_id = ? AND habit_id = ?",
+    cur.execute("  UPDATE user_habit SET active = 0 "
+                "WHERE user_id = ? AND habit_id = ?",
                 (user_id, habit_id))
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
     habit_name = cur.fetchone()[0]
@@ -141,6 +146,11 @@ def delete_habit(user_id, habit_id):
     conn.close()
     return output_message
 
+cur.execute('''
+UPDATE user_habit
+SET frequency_count = 10
+WHERE user_id = 1 AND habit_id = 2
+''')
 
 
 # Функция для отметки привычки

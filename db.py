@@ -32,7 +32,8 @@ def init_db():
             active BOOLEAN NOT NULL DEFAULT 1,
             frequency_name TEXT CHECK(frequency_name IN ('ежедневно', 'еженедельно', 'ежемесячно')),
             frequency_count INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users(id),
+
+            FOREIGN KEY (user_id) REFERENCES user(id),
             FOREIGN KEY (habit_id) REFERENCES habit(id),
             CONSTRAINT unique_user_habit UNIQUE (user_id, habit_id)
         )
@@ -45,7 +46,7 @@ def init_db():
             habit_id INTEGER,
             mark_date DATE,
             mark_count INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (user_id) REFERENCES user(id),
             FOREIGN KEY (habit_id) REFERENCES habit(id),
             CONSTRAINT unique_user_habit UNIQUE (user_id, habit_id, mark_date)
         )
@@ -60,6 +61,7 @@ def init_db():
             data TEXT
         )
     ''')
+
     conn.commit()
     conn.close()
 
