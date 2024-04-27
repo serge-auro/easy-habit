@@ -74,7 +74,8 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
                  # Значение user_id = message.chat.id, habit_id = id заданной привычки из таблицы habit
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
     habit_name = cur.fetchone()[0]
-    message_text = f"Вы добавили себе привычку {habit_name}, которую хотите выполнять {frequency_name}, {frequency_count} раз за период"
+    frequency_text = "в день" if frequency_name == "daily" else "в неделю" if frequency_name == "weekly" else "в месяц" if frequency_name == "monthly" else "в неопределённый период"
+    message_text = f"Вы добавили себе привычку {habit_name}, которую хотите выполнять {frequency_count} раз {frequency_text}."
     conn.commit()
     conn.close()
     return message_text
