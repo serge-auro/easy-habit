@@ -50,7 +50,10 @@ def handle_status(call):
         return
 
     # Создание одной строки с описанием всех привычек
-    respond_message = "\n".join([f"{habit} - {description}" for habit, description in habits_info.items()])
+    respond_message = "\n".join([
+        f"{habit} - {info['description']} {info['frequency']} {info['count']} {pluralize_count(info['count'])}"
+        for habit, info in habits_info.items()
+    ])
     bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
 
 
@@ -221,7 +224,7 @@ def handle_repetition_count_input(message):
             repetition_count = int(message.text)
             if 1 <= repetition_count <= 30:
                 response = assign_habit(message.chat.id, session_data['habit_id'], session_data['frequency_name'], repetition_count)
-                bot.send_message(message.chat.id, response)
+                bot.send_message(message.chat.id, response, reply_markup=create_inline_keyboard(['menu']))
                 clear_user_session(message.chat.id)
             else:
                 bot.send_message(message.chat.id, "Введите число от 1 до 30.")
