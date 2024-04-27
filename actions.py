@@ -39,10 +39,10 @@ def user_notify():
 #также, функция datetime.now().strftime('%Y-%m-%d') записывает дату создания записи
 # о пользователе в таблицу users в столбец creation_date
 #по умолчанию статус active = 1 (столбец users.active)
-def init_user(user_id): #где user_id = message.chat.id
+def init_user(user_id):  # где user_id = message.chat.id
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO user (id, creation_date) VALUES (?, ?)",
+    cur.execute("INSERT OR IGNORE INTO users (id, creation_date) VALUES (?, ?)",
                 (user_id, datetime.now().strftime('%Y-%m-%d')))
     conn.commit()
     conn.close()
