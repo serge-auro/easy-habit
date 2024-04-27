@@ -365,3 +365,12 @@ def clear_user_session(user_id):
             ''', (user_id,))
         conn.commit()
 
+
+# Вспомогательная функция для определения склонения слова "раз"
+def pluralize_count(n):
+    if n % 10 == 1 and n % 100 != 11:
+        return 'раз'
+    elif n % 10 in [2, 3, 4] and n % 100 not in [12, 13, 14]:
+        return 'раза'
+    else:
+        return 'раз'
