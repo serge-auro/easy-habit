@@ -154,68 +154,81 @@ def handle_repetition_count_input(message):
     else:
         bot.send_message(message.chat.id, "Истекло время ожидания ввода, пожалуйста начните процесс заново.")
 
-
-# Обработчик для выбора добавления новой привычки
+# Добавление новой привычки ======================================================================================
+# Обработчик для начала процесса добавления новой привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
 def handle_new_habit(call):
-    respond_message = list_habits(call.from_user.id)
+    # Получаем список привычек для пользователя
+    habits_list_str = list_habits(call.from_user.id)  # Функция возвращает строку с описаниями привычек
+    # Предположим, что формат строки: "ID. Название: Описание"
+    habits = [line.split('. ', 1) for line in habits_list_str.strip().split('\n') if line]
     keyboard = types.InlineKeyboardMarkup()
-    for line in respond_message.split('\n')[1:]:  # Пропускаем первую строку (заголовок)
-        if line.strip():
-            habit_id, habit_info = line.split('.', 1)
-            keyboard.add(types.InlineKeyboardButton(text=habit_info.strip(), callback_data='add_select_' + habit_id.strip()))
+    for habit_info in habits:
+        if len(habit_info) == 2:
+            habit_id_with_dot, habit_desc = habit_info
+            habit_id = habit_id_with_dot.split('.')[0]  # Удаление точки после ID
+            habit_name = habit_desc.split(': ')[0]  # Извлекаем название привычки
+            button_text = habit_name  # Используем название для подписи кнопки
+            keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=f'add_select_{habit_id.strip()}'))
+        else:
+            continue  # Пропустить записи, которые не соответствуют ожидаемому формату
     bot.send_message(call.message.chat.id, "Выберите привычку для добавления:", reply_markup=keyboard)
 
-# Обработчик для выбора периодичности добавляемой привычки
+
+# Обработчик для выбора привычки и перехода к выбору периодичности
 @bot.callback_query_handler(func=lambda call: call.data.startswith('add_select_'))
-def select_habit(call):
-    selected_habit_id = call.data.split('_')[2]
+def select_habit_for_addition(call):
+    habit_id = call.data.split('_')[2]
+    state = 'selecting_habit'  # Устанавливаем состояние сессии
+    data = json.dumps({'habit_id': habit_id})  # Конвертируем данные в строку JSON
+    save_user_session(call.from_user.id, state, data)
     keyboard = types.InlineKeyboardMarkup()
-    periods = ["daily", "weekly", "monthly"]
+    periods = ["ежедневно", "еженедельно", "ежемесячно"]
     for period in periods:
-        keyboard.add(types.InlineKeyboardButton(text=f"Ежедневно" if period == "daily" else "Еженедельно" if period == "weekly" else "Ежемесячно",
-                                                callback_data=f'add_{selected_habit_id}_{period}_setcount'))
-    bot.send_message(call.message.chat.id, 'Выберите периодичность привычки:', reply_markup=keyboard)
+        keyboard.add(types.InlineKeyboardButton(text=period, callback_data=f'add_period_{period}_{habit_id}'))
+    bot.send_message(call.message.chat.id, "Выберите периодичность привычки:", reply_markup=keyboard)
 
-# Обработчик для запроса ввода количества повторений
-@bot.callback_query_handler(func=lambda call: call.data.endswith('setcount'))
-def request_habit_repetition_input(call):
-    _, selected_habit_id, frequency = call.data.split('_')[1:4]
-    message_text = f"Введите количество повторений для привычки с ID {selected_habit_id} (от 1 до 30)."
-    bot.send_message(call.message.chat.id, message_text, reply_markup=types.ForceReply(selective=True))
-    # Сохранение или обновление сессии
-    session_data = {'habit_id': selected_habit_id, 'frequency': frequency}
-    update_session(call.message.chat.id, 'Введите количество повторений', json.dumps(session_data))
+# Обработчик для выбора периодичности и перехода к вводу количества выполнений
+@bot.callback_query_handler(func=lambda call: call.data.startswith('add_period_'))
+def select_period(call):
+    parts = call.data.split('_')
+    if len(parts) < 4:
+        bot.send_message(call.message.chat.id, "Произошла ошибка в данных. Пожалуйста, попробуйте ещё раз.")
+        return
+    period = parts[2]
+    habit_id = '_'.join(parts[3:])  # Объединение оставшихся частей для сохранения целостности habit_id
+    state = 'selecting_period'  # или другое актуальное состояние
+    new_data = json.dumps({'frequency_name': period, 'habit_id': habit_id})
+    # Обновляем сессию пользователя
+    update_user_session(call.from_user.id, state, new_data)
+    # Запрашиваем количество выполнений
+    msg = "Введите количество выполнений для привычки (от 1 до 30):"
+    bot.send_message(call.message.chat.id, msg, reply_markup=types.ForceReply(selective=True))
 
 
-# Обработчик для текстовых ответов на запрос количества повторений
-@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите количество повторений"))
+
+# Обработчик для текстового ввода количества выполнений
+import json  # Убедитесь, что импортирован json
+
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите количество выполнений"))
 def handle_repetition_count_input(message):
-    session_data = get_session(message.chat.id)
-    if session_data:
-        data = json.loads(session_data['data'])
+    raw_session_data = get_user_session(message.chat.id)
+    if raw_session_data:
         try:
+            session_data = json.loads(raw_session_data)  # Десериализация строки JSON в словарь
             repetition_count = int(message.text)
             if 1 <= repetition_count <= 30:
-                # Добавляем новую привычку, используя информацию из сессии
-                response_message = assign_habit(message.chat.id, data['habit_id'], data['frequency'], repetition_count)
-                bot.send_message(message.chat.id, response_message)
-                # Обновление или завершение сессии
-                update_session(message.chat.id, 'completed', '{}')
+                response = assign_habit(message.chat.id, session_data['habit_id'], session_data['frequency_name'], repetition_count)
+                bot.send_message(message.chat.id, response)
+                clear_user_session(message.chat.id)
             else:
                 bot.send_message(message.chat.id, "Введите число от 1 до 30.")
         except ValueError:
             bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
     else:
-        bot.send_message(message.chat.id, "Истекло время ожидания ввода, пожалуйста начните процесс заново.")
+        bot.send_message(message.chat.id, "Сессия не найдена или истекло время ожидания. Пожалуйста, начните заново.")
 
-
-# Обработчик для добавления выбранной привычки
-@bot.callback_query_handler(func=lambda call: call.data.startswith('add_'))
-def add_selected_habit(call):
-    selected_habit = call.data.split('_')[1]
-    assign_habit(call.from_user.id, selected_habit)
-    bot.send_message(call.message.chat.id, f"Привычка '{selected_habit}' добавлена.")
+# ==================================================================================================================
 
 # Обработчик для выбора удаления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'del_habit')

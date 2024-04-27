@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from datetime import datetime
 from datetime import timedelta
 import json
@@ -61,7 +62,7 @@ def list_habits(user_id):
     cur.execute("SELECT  id, name, description FROM habit")
     habits = cur.fetchall()
 
-    message_text = "Cписок привычек:\n"
+    message_text = ""
 
     for habit in habits:
         message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
@@ -295,36 +296,51 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
     finally:
         conn.close()
 
+def db_connection():
+    """Устанавливает соединение с базой данных."""
+    return sqlite3.connect('easy_habit.db')
 
-def save_session(user_id, state, data):
-    with sqlite3.connect('easy_habit.db') as conn:
+def save_user_session(user_id, state, data):
+    """ Сохранение данных сессии для пользователя """
+    with closing(db_connection()) as conn:
         cursor = conn.cursor()
-        try:
-            cursor.execute('''
-                INSERT INTO sessions (user_id, state, data) VALUES (?, ?, ?)
-            ''', (user_id, state, json.dumps(data)))
-            conn.commit()
-        except sqlite3.Error as e:
-            print(f"An error occurred: {e}")
+        cursor.execute('''
+            INSERT INTO sessions (user_id, state, last_interaction, data) 
+            VALUES (?, ?, datetime('now'), ?)
+            ''', (user_id, state, data))
+        conn.commit()
 
-def update_session(session_id, state, data):
-    with sqlite3.connect('easy_habit.db') as conn:
+def update_user_session(user_id, new_state, new_data):
+    """ Обновление данных сессии для пользователя """
+    with closing(db_connection()) as conn:
         cursor = conn.cursor()
-        try:
-            cursor.execute('''
-                UPDATE sessions SET state = ?, data = ? WHERE session_id = ?
-            ''', (state, json.dumps(data), session_id))
-            conn.commit()
-        except sqlite3.Error as e:
-            print(f"An error occurred: {e}")
+        cursor.execute('''
+            UPDATE sessions 
+            SET state = ?, data = ?, last_interaction = datetime('now') 
+            WHERE user_id = ?
+            ''', (new_state, new_data, user_id))
+        conn.commit()
 
-def get_session(user_id):
-    with sqlite3.connect('easy_habit.db') as conn:
+def get_user_session(user_id):
+    """ Получение данных сессии пользователя """
+    with closing(db_connection()) as conn:
         cursor = conn.cursor()
-        try:
-            cursor.execute('SELECT * FROM sessions WHERE user_id = ?', (user_id,))
-            session = cursor.fetchone()
-        except sqlite3.Error as e:
-            print(f"An error occurred: {e}")
-            session = None
-    return session
+        cursor.execute('''
+            SELECT data FROM sessions 
+            WHERE user_id = ? 
+            ORDER BY last_interaction DESC 
+            LIMIT 1
+            ''', (user_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+def clear_user_session(user_id):
+    """ Очистка данных сессии пользователя """
+    with closing(db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM sessions 
+            WHERE user_id = ?
+            ''', (user_id,))
+        conn.commit()
+
