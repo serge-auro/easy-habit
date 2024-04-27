@@ -133,13 +133,13 @@ def request_habit_repetition_input(call):
     bot.send_message(call.message.chat.id, message_text, reply_markup=types.ForceReply(selective=True))
     # Сохранение или обновление сессии
     session_data = {'habit': selected_habit, 'frequency': frequency}
-    update_session(call.message.chat.id, 'awaiting_repetition_count', json.dumps(session_data))
+    update_user_session(call.message.chat.id, 'awaiting_repetition_count', json.dumps(session_data))
 
 
 # Обработчик для текстовых ответов на запрос количества повторений
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите количество повторений"))
 def handle_repetition_count_input(message):
-    session_data = get_session(message.chat.id)
+    session_data = get_user_session(message.chat.id)
     if session_data:
         data = json.loads(session_data['data'])
         try:
@@ -148,7 +148,7 @@ def handle_repetition_count_input(message):
                 edit_habit(message.chat.id, data['habit'], data['frequency'], repetition_count)
                 bot.send_message(message.chat.id, f"Установлено {repetition_count} повторений в день для '{data['habit']}'.")
                 # Обновление или завершение сессии
-                update_session(message.chat.id, 'completed', '{}')
+                update_user_session(message.chat.id, 'completed', '{}')
             else:
                 bot.send_message(message.chat.id, "Введите число от 1 до 30.")
         except ValueError:
