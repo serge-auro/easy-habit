@@ -190,7 +190,9 @@ WHERE user_id = 1 AND habit_id = 2
 
 
 
-def mark_habit(user_id, habit_id, mark_date, count=1):
+def mark_habit(user_id, habit_id):
+    count = 1
+    mark_date = datetime.now().date().strftime('%Y-%m-%d')
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     output_message = ""
