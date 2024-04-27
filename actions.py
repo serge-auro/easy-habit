@@ -28,7 +28,7 @@ def init_user(user_id):  # где user_id = message.chat.id
 def init_habit(name, description):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO habit ( name, description) VALUES (?, ?)",
+    cur.execute("INSERT OR IGNORE INTO habit ( name, description) VALUES (?, ?)",
                 (name, description))
     conn.commit()
     conn.close()
@@ -48,7 +48,17 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
                  # Значение user_id = message.chat.id, habit_id = id заданной привычки из таблицы habit
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
     habit_name = cur.fetchone()[0]
-    message_text = f"Вы добавили себе привычку {habit_name}, которую хотите выполнять {frequency_name}, {frequency_count} раз за период"
+    # Определение правильного склонения слова "раз"
+    if frequency_count == 1:
+        count_word = "раз"
+    elif 2 <= frequency_count % 10 <= 4 and (frequency_count % 100 < 10 or frequency_count % 100 > 20):
+        count_word = "раза"
+    else:
+        count_word = "раз"
+    frequency_text = "в день" if frequency_name == "daily" else "в неделю" if frequency_name == "weekly" else "в месяц" if frequency_name == "monthly" else "в неопределённый период"
+
+    message_text = f"Вы добавили себе привычку '{habit_name}', которую хотите выполнять {frequency_count} {count_word} {frequency_text}."
+
     conn.commit()
     conn.close()
     return message_text
@@ -181,7 +191,8 @@ def delete_habit(user_id, habit_id):
 
 
 
-def mark_habit(user_id, habit_id, mark_date=datetime.now().strftime('%Y-%m-%d'), count=1):
+
+def mark_habit(user_id, habit_id, mark_date = datetime.now().strftime('%Y-%m-%d'), count=1):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     output_message = ""
