@@ -257,25 +257,35 @@ def delete_selected_habit(call):
 # Обработчик для выбора отметки привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
 def handle_mark_habit(call):
-    user_habit_status = habit_status(call.from_user.id)
-    if not user_habit_status:
+    habits_list_str = list_habits()  # Получаем список привычек
+    if not habits_list_str.strip():
         keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
         bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек.', reply_markup=keyboard)
         return
 
+    habits = [line.split('. ', 1) for line in habits_list_str.strip().split('\n') if line]
     keyboard = types.InlineKeyboardMarkup()
-    for habit, description in user_habit_status.items():
-        button_text = f"{habit} - {description}"
-        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data='mark_' + habit))
+    for habit_info in habits:
+        if len(habit_info) == 2:
+            habit_id, habit_desc = habit_info[0], habit_info[1]
+            habit_name = habit_desc.split(': ')[0]
+            button_text = f"{habit_name}"
+            keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=f'mark_{habit_id.strip()}'))
     bot.send_message(call.message.chat.id, 'Выберите привычку для отметки:', reply_markup=keyboard)
 
 # Обработчик для отметки выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('mark_'))
 def mark_selected_habit(call):
-    habit = call.data.split('mark_')[1]
-    mark_habit(call.from_user.id, habit)
-    bot.answer_callback_query(call.id, f"Привычка '{habit}' отмечена как выполненная.")
-    bot.send_message(call.message.chat.id, f"Привычка '{habit}' успешно отмечена как выполненная!")
+    habit_id = call.data.split('mark_')[1]
+    response = mark_habit(call.from_user.id, habit_id)  # Вызов функции для отметки выполнения привычки
+    if response == "OK":
+        # Если функция вернула "OK", отправляем сообщение об успешной отметке
+        bot.answer_callback_query(call.id, "Привычка отмечена как выполненная.")
+        bot.send_message(call.message.chat.id, f"Привычка успешно отмечена как выполненная!")
+    else:
+        # Если функция вернула ошибку, отправляем сообщение об ошибке
+        bot.answer_callback_query(call.id, "Извините, не смог отметить - что-то пошло не так.")
+        bot.send_message(call.message.chat.id, "Извините, не смог отметить - что-то пошло не так.")
 
 
 # Обработчики для вывода списка всех привычек (предустановленных)
