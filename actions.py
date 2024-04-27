@@ -181,7 +181,7 @@ def delete_habit(user_id, habit_id):
 
 
 
-def mark_habit(user_id, habit_id, mark_date, count=1):
+def mark_habit(user_id, habit_id, mark_date=datetime.now().strftime('%Y-%m-%d'), count=1):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     output_message = ""

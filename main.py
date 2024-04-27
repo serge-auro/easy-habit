@@ -45,7 +45,7 @@ def handle_status(call):
     keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'menu'])
 
     if not habits_info:
-        bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек или произошла ошибка.',
+        bot.send_message(call.message.chat.id, 'Активных привычек нет, заведём?',
                          reply_markup=keyboard)
         return
 
@@ -105,7 +105,7 @@ def handle_edit_habit(call):
     respond_message = habit_status(call.from_user.id)
     if not respond_message:
         keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
-        bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек или произошла ошибка.', reply_markup=keyboard)
+        bot.send_message(call.message.chat.id, 'Активных привычек нет, заведём?', reply_markup=keyboard)
         return
 
     keyboard = types.InlineKeyboardMarkup()
@@ -161,7 +161,7 @@ def handle_repetition_count_input(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
 def handle_new_habit(call):
     # Получаем список привычек для пользователя
-    habits_list_str = list_habits(call.from_user.id)  # Функция возвращает строку с описаниями привычек
+    habits_list_str = list_habits()  # Функция возвращает строку с описаниями привычек
     # Предположим, что формат строки: "ID. Название: Описание"
     habits = [line.split('. ', 1) for line in habits_list_str.strip().split('\n') if line]
     keyboard = types.InlineKeyboardMarkup()
@@ -238,7 +238,7 @@ def handle_del_habit(call):
     user_habit_status = habit_status(call.from_user.id)
     if not user_habit_status:
         keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
-        bot.send_message(call.message.chat.id, 'У вас нет активных привычек или произошла ошибка.', reply_markup=keyboard)
+        bot.send_message(call.message.chat.id, 'У вас нет активных привычек.', reply_markup=keyboard)
         return
 
     keyboard = types.InlineKeyboardMarkup()
@@ -260,7 +260,7 @@ def handle_mark_habit(call):
     user_habit_status = habit_status(call.from_user.id)
     if not user_habit_status:
         keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
-        bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек или произошла ошибка.', reply_markup=keyboard)
+        bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек.', reply_markup=keyboard)
         return
 
     keyboard = types.InlineKeyboardMarkup()
@@ -281,7 +281,7 @@ def mark_selected_habit(call):
 # Обработчики для вывода списка всех привычек (предустановленных)
 @bot.callback_query_handler(func=lambda call: call.data == 'habits')
 def handle_habits(call):
-    respond_message = list_habits(call.from_user.id)
+    respond_message = list_habits()
     keyboard = create_inline_keyboard(['new_habit', 'edit_habit', 'del_habit', 'menu'])
     bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
 
