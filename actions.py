@@ -7,6 +7,16 @@ import json
 PERIOD = ("month", "week")
 FREQUENCY = ("ежедневно", "еженедельно", "ежемесячно")
 
+
+class HabitEntity:
+    def __int__(self, habit_id, name, description, frequency, count):
+        print(f"id={habit_id} name={name} description={description} frequency={frequency} count={count}")
+        self.habit_id = habit_id
+        self.name = name
+        self.description = description
+        self.frequency = frequency
+        self.count = count
+
 #Метод создания нового юзера.  У нового юзера из ТГ достается его telegram id,
 # и записывается в таблицу users как users.id
 # (где users - название таблицы, id - название столбца)
@@ -60,17 +70,14 @@ def list_habits():
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
-    habits = cur.fetchall()
+    habits = []
+    for habit in cur.fetchall():
+        print(f"id={habit[0]} name={habit[1]} description={habit[2]} frequency={None} count={0}")
+        habit_entity = HabitEntity(habit[0], habit[1], habit[2], None, 0)
+        habits.append(habit_entity)
 
-    message_text = ""
-
-    for habit in habits:
-        message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
-    # возвращает список с именами и описаниями привычек
-    # 1 строка = 1 привычка
-    # надо посмотреть, как это выводится в ТГ
     conn.close()
-    return message_text
+    return habits
 
 # Запрос для получения названия и описания всех активных привычек пользователя
 #Входной параметр id юзера из ТГ: user_id = message.chat.id
@@ -181,7 +188,7 @@ def delete_habit(user_id, habit_id):
 
 
 
-def mark_habit(user_id, habit_id, mark_date, count=1):
+def mark_habit(user_id, habit_id, mark_date=datetime.now().strftime('%Y-%m-%d'), count=1):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     output_message = ""

@@ -161,19 +161,14 @@ def handle_repetition_count_input(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
 def handle_new_habit(call):
     # Получаем список привычек для пользователя
-    habits_list_str = list_habits()  # Функция возвращает строку с описаниями привычек
-    # Предположим, что формат строки: "ID. Название: Описание"
-    habits = [line.split('. ', 1) for line in habits_list_str.strip().split('\n') if line]
+    habits = []
+    habits = list_habits()  # Функция возвращает массив Привычек
     keyboard = types.InlineKeyboardMarkup()
     for habit_info in habits:
-        if len(habit_info) == 2:
-            habit_id_with_dot, habit_desc = habit_info
-            habit_id = habit_id_with_dot.split('.')[0]  # Удаление точки после ID
-            habit_name = habit_desc.split(': ')[0]  # Извлекаем название привычки
-            button_text = habit_name  # Используем название для подписи кнопки
-            keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=f'add_select_{habit_id.strip()}'))
-        else:
-            continue  # Пропустить записи, которые не соответствуют ожидаемому формату
+        habit_id = habit_info.habit_id
+        habit_name = habit_info.name
+        button_text = habit_name  # Используем название для подписи кнопки
+        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=f'add_select_{habit_id}'))
     bot.send_message(call.message.chat.id, "Выберите привычку для добавления:", reply_markup=keyboard)
 
 
@@ -281,7 +276,10 @@ def mark_selected_habit(call):
 # Обработчики для вывода списка всех привычек (предустановленных)
 @bot.callback_query_handler(func=lambda call: call.data == 'habits')
 def handle_habits(call):
-    respond_message = list_habits(call.from_user.id)
+    habits = list_habits()
+    respond_message = ""
+    for habit in habits:
+        respond_message += str(habit.name)
     keyboard = create_inline_keyboard(['new_habit', 'edit_habit', 'del_habit', 'menu'])
     bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
 
