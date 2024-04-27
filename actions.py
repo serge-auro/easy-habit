@@ -1,37 +1,10 @@
 import sqlite3
 from datetime import datetime
 from datetime import timedelta
-import telebot
+import json
 
 PERIOD = ("month", "week")
 FREQUENCY = ("ежедневно", "еженедельно", "ежемесячно")
-
-
-def init_user(user_id):
-    pass
-
-
-def get_habit_status(user_id):
-    pass
-
-
-def report(user_id, habit_id, period: PERIOD):
-    pass
-
-
-def edit_habit(user_id, habit_id, active: bool, frequency_name: FREQUENCY, frequency_count):
-    pass
-
-
-def mark_habit(user_id, habit_id):
-    pass
-
-
-def user_notify():
-    pass
-
-
-
 
 #Метод создания нового юзера.  У нового юзера из ТГ достается его telegram id,
 # и записывается в таблицу users как users.id
@@ -87,7 +60,9 @@ def list_habits():
     cur = conn.cursor()
     cur.execute("SELECT  id, name, description FROM habit")
     habits = cur.fetchall()
-    message_text = "Cписок привычек:\n")
+
+    message_text = "Cписок привычек:\n"
+
     for habit in habits:
         message_text += f"{habit[0]}. {habit[1]}: {habit[2]}\n"
     # возвращает список с именами и описаниями привычек
@@ -331,14 +306,35 @@ def mark_habit(user_id, habit_id, mark_date, count=1):
         conn.close()
 
 
+def save_session(user_id, state, data):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                INSERT INTO sessions (user_id, state, data) VALUES (?, ?, ?)
+            ''', (user_id, state, json.dumps(data)))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
 
+def update_session(session_id, state, data):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE sessions SET state = ?, data = ? WHERE session_id = ?
+            ''', (state, json.dumps(data), session_id))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
 
-
-
-
-
-
-
-
-
-
+def get_session(user_id):
+    with sqlite3.connect('easy_habit.db') as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT * FROM sessions WHERE user_id = ?', (user_id,))
+            session = cursor.fetchone()
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            session = None
+    return session
