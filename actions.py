@@ -147,11 +147,11 @@ def delete_habit(user_id, habit_id):
     conn.close()
     return output_message
 
-cur.execute('''
-UPDATE user_habit
-SET frequency_count = 10
-WHERE user_id = 1 AND habit_id = 2
-''')
+# cur.execute('''
+# UPDATE user_habit
+# SET frequency_count = 10
+# WHERE user_id = 1 AND habit_id = 2
+# ''')
 
 
 # Функция для отметки привычки
