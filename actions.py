@@ -42,7 +42,7 @@ def user_notify():
 def init_user(user_id):  # где user_id = message.chat.id
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("INSERT OR IGNORE INTO users (id, creation_date) VALUES (?, ?)",
+    cur.execute("INSERT OR IGNORE INTO user (id, creation_date) VALUES (?, ?)",
                 (user_id, datetime.now().strftime('%Y-%m-%d')))
     conn.commit()
     conn.close()
