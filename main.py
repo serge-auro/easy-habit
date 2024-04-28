@@ -45,6 +45,7 @@ def handle_status(call):
     keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'menu'])
 
     if not habits_info:
+        keyboard = create_inline_keyboard(['new_habit', 'menu'])
         bot.send_message(call.message.chat.id, 'Активных привычек нет, заведём?',
                          reply_markup=keyboard)
         return
@@ -260,35 +261,48 @@ def delete_selected_habit(call):
 # Обработчик для выбора отметки привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
 def handle_mark_habit(call):
-    habits_list_str = list_habits()  # Получаем список привычек
-    if not habits_list_str.strip():
+    habits_dict = habit_status(call.from_user.id)  # Получаем словарь активных привычек
+    if habits_dict is None:
         keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
         bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек.', reply_markup=keyboard)
         return
 
-    habits = [line.split('. ', 1) for line in habits_list_str.strip().split('\n') if line]
     keyboard = types.InlineKeyboardMarkup()
-    for habit_info in habits:
-        if len(habit_info) == 2:
-            habit_id, habit_desc = habit_info[0], habit_info[1]
-            habit_name = habit_desc.split(': ')[0]
-            button_text = f"{habit_name}"
-            keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=f'mark_{habit_id.strip()}'))
+    for habit_name, habit_info in habits_dict.items():
+        habit_id = get_habit_id(habit_name)  # Получаем ID привычки по её названию
+        button_text = f"{habit_name}"
+        callback_data = f'mark_{habit_id}_{habit_name.strip()}'
+        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=callback_data))
     bot.send_message(call.message.chat.id, 'Выберите привычку для отметки:', reply_markup=keyboard)
+
 
 # Обработчик для отметки выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('mark_'))
 def mark_selected_habit(call):
-    habit_id = call.data.split('mark_')[1]
-    response = mark_habit(call.from_user.id, habit_id)  # Вызов функции для отметки выполнения привычки
-    if response == "OK":
-        # Если функция вернула "OK", отправляем сообщение об успешной отметке
-        bot.answer_callback_query(call.id, "Привычка отмечена как выполненная.")
-        bot.send_message(call.message.chat.id, f"Привычка успешно отмечена как выполненная!")
+    # Разделяем callback_data для получения habit_id
+    parts = call.data.split('_')
+    habit_id = parts[1]  # Убеждаемся, что habit_id корректно извлечён без дополнительных символов
+
+    # Получаем имя привычки из базы данных
+    habit_name = get_habit_name(habit_id)  # Эта функция должна возвращать имя привычки по её ID
+
+    # Проверяем, что имя привычки было успешно получено
+    if habit_name:
+        # Вызываем функцию для отметки привычки
+        response = mark_habit(call.from_user.id, habit_id)
+
+        # Обработка ответа от функции mark_habit
+        if response == "OK":
+            success_message = f"Привычка '{habit_name}' успешно отмечена как выполненная!"
+            bot.send_message(call.message.chat.id, success_message)
+        else:
+            error_message = "Извините, не смог отметить - что-то пошло не так."
+            bot.send_message(call.message.chat.id, error_message)
     else:
-        # Если функция вернула ошибку, отправляем сообщение об ошибке
-        bot.answer_callback_query(call.id, "Извините, не смог отметить - что-то пошло не так.")
-        bot.send_message(call.message.chat.id, "Извините, не смог отметить - что-то пошло не так.")
+        error_message = "Не удалось получить название привычки. Пожалуйста, попробуйте ещё раз."
+        bot.send_message(call.message.chat.id, error_message)
+
+    bot.answer_callback_query(call.id)
 
 
 # Обработчики для вывода списка всех привычек (предустановленных)
