@@ -42,7 +42,7 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     cur.execute("INSERT INTO user_habit (user_id, habit_id, frequency_name, frequency_count) VALUES (?, ?, ?, ?)",
-                (user_id, habit_id,frequency_name, frequency_count))
+                (user_id, habit_id, frequency_name, frequency_count))
 
                  # Значение user_id = message.chat.id, habit_id = id заданной привычки из таблицы habit
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
@@ -188,7 +188,10 @@ WHERE user_id = 1 AND habit_id = 2
 # Сейчас он получает об этом сообщение и не может добавить еще 2 выполнения.
 # Стоит ли ограничивать перевыполнение нормы?
 
-def mark_habit(user_id, habit_id, mark_date = datetime.now().date().strftime('%Y-%m-%d'),count=1):
+
+
+def mark_habit(user_id, habit_id, mark_date = datetime.now().date().strftime('%Y-%m-%d'), count = 1):
+
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
 
@@ -224,6 +227,21 @@ def mark_habit(user_id, habit_id, mark_date = datetime.now().date().strftime('%Y
         conn.close()
 
 
+
+def db_connection():
+    """Устанавливает соединение с базой данных."""
+    return sqlite3.connect('easy_habit.db')
+
+def save_user_session(user_id, state, data):
+    """ Сохранение данных сессии для пользователя """
+    with closing(db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO sessions (user_id, state, last_interaction, data) 
+            VALUES (?, ?, datetime('now'), ?)
+            ''', (user_id, state, data))
+        conn.commit()
+
 def save_session(user_id, state, data):
     with sqlite3.connect('easy_habit.db') as conn:
         cursor = conn.cursor()
@@ -249,10 +267,38 @@ def update_session(session_id, state, data):
 def get_session(user_id):
     with sqlite3.connect('easy_habit.db') as conn:
         cursor = conn.cursor()
-        try:
-            cursor.execute('SELECT * FROM sessions WHERE user_id = ?', (user_id,))
-            session = cursor.fetchone()
-        except sqlite3.Error as e:
-            print(f"An error occurred: {e}")
-            session = None
-    return session
+
+        cursor.execute('''
+            DELETE FROM sessions 
+            WHERE user_id = ?
+            ''', (user_id,))
+        conn.commit()
+
+
+# Вспомогательная функция для определения склонения слова "раз"
+def pluralize_count(n):
+    if n % 10 == 1 and n % 100 != 11:
+        return 'раз'
+    elif n % 10 in [2, 3, 4] and n % 100 not in [12, 13, 14]:
+        return 'раза'
+    else:
+        return 'раз'
+
+
+# Вспомогательная функция для получения id привычки по её имени
+def get_habit_id(habit_name):
+    with closing(db_connection()) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM habit WHERE name = ?', (habit_name,))
+        result = cur.fetchone()  # Получаем первую запись из результатов запроса
+        return result[0] if result else None
+
+
+# Вспомогательная функция для получения имени привычки по её id
+def get_habit_name(habit_id):
+    with closing(db_connection()) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT name FROM habit WHERE id = ?', (habit_id,))
+        result = cur.fetchone()  # Получаем первую запись из результатов запроса
+        return result[0] if result else None
+
