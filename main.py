@@ -19,7 +19,8 @@ buttons_dict = {
     'menu': 'На главную',
     'status': 'Статус',
     'report': 'Отчеты',
-    'edit_habit': 'Редактировать',
+    'edit_menu': 'Редактировать',
+    'edit_habit': 'Изменить привычку',
     'new_habit': 'Добавить',
     'del_habit': 'Удалить',
     'mark_habit': 'Отметить V',
@@ -43,7 +44,7 @@ def handle_menu(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'status')
 def handle_status(call):
     habits_info = habit_status(call.from_user.id)
-    keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'report', 'menu'])
+    keyboard = create_inline_keyboard(['edit_menu', 'mark_habit', 'report', 'menu'])
 
     if not habits_info:
         keyboard = create_inline_keyboard(['new_habit', 'menu'])
@@ -57,6 +58,13 @@ def handle_status(call):
         for habit, info in habits_info.items()
     ])
     bot.send_message(call.message.chat.id, f'Привычки, которые вы отслеживаете:\n\n{respond_message}', reply_markup=keyboard)
+
+
+# Обработчик для меню редактирования
+@bot.callback_query_handler(func=lambda call: call.data == 'edit_menu')
+def handle_edit_menu(call):
+    keyboard = create_inline_keyboard(['edit_habit', 'new_habit', 'del_habit', 'menu'])
+    bot.send_message(call.message.chat.id, 'Выберите действие', reply_markup=keyboard)
 
 
 # Обработчик для вывода отчета
@@ -89,6 +97,7 @@ def select_habit_for_report(call):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Неделя', callback_data=f'report_week_{habit_id}'))
     keyboard.add(types.InlineKeyboardButton(text='Месяц', callback_data=f'report_month_{habit_id}'))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, 'Выберите период для отчета:', reply_markup=keyboard)
 
 
@@ -118,7 +127,7 @@ def handle_edit_habit(call):
     habits_info = habit_status(user_id)  # Получаем информацию о привычках пользователя
     if not habits_info:
         # Если у пользователя нет активных привычек, отправляем сообщение
-        bot.send_message(call.message.chat.id, "У вас нет активных привычек для редактирования.")
+        bot.send_message(call.message.chat.id, "У вас нет активных привычек для редактирования.", reply_markup=create_inline_keyboard(['menu']))
         return
 
     keyboard = types.InlineKeyboardMarkup()  # Создаем клавиатуру для выбора привычки
@@ -126,6 +135,7 @@ def handle_edit_habit(call):
         # Для каждой привычки добавляем кнопку на клавиатуру
         keyboard.add(types.InlineKeyboardButton(text=f"{habit}", callback_data=f'edit_select_{habit}'))
     # Отправляем сообщение с клавиатурой для выбора привычки
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, "Выберите привычку для редактирования:", reply_markup=keyboard)
 
 # Обработчик для выбора привычки к редактированию
@@ -134,7 +144,7 @@ def select_habit_for_editing(call):
     habit_name = call.data.split('_')[2]
     habit_id = get_habit_id(habit_name)  # Получаем ID привычки по её названию
     if habit_id is None:
-        bot.send_message(call.message.chat.id, "Привычка не найдена. Пожалуйста, проверьте данные.")
+        bot.send_message(call.message.chat.id, "Привычка не найдена. Пожалуйста, проверьте данные.", reply_markup=create_inline_keyboard(['menu']))
         return
     state = 'selecting_habit_for_edit'
     data = json.dumps({'habit_id': habit_id})
@@ -143,6 +153,7 @@ def select_habit_for_editing(call):
     periods = ["ежедневно", "еженедельно", "ежемесячно"]
     for period in periods:
         keyboard.add(types.InlineKeyboardButton(text=period, callback_data=f'edit_period_{period}_{habit_id}'))
+    keyboard.add(types.InlineKeyboardButton(text='Отмена', callback_data='menu'))
     bot.send_message(call.message.chat.id, "Выберите новую периодичность привычки:", reply_markup=keyboard)
 
 
@@ -181,7 +192,7 @@ def handle_repetition_count_input(message):
         except ValueError:
             bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
     else:
-        bot.send_message(message.chat.id, "Сессия не найдена или истекло время ожидания. Пожалуйста, начните заново.")
+        bot.send_message(message.chat.id, "Сессия не найдена или истекло время ожидания. Пожалуйста, начните заново.", reply_markup=create_inline_keyboard(['menu']))
 # ===============================================================================================================
 
 
@@ -217,6 +228,7 @@ def select_habit_for_addition(call):
     periods = ["ежедневно", "еженедельно", "ежемесячно"]
     for period in periods:
         keyboard.add(types.InlineKeyboardButton(text=period, callback_data=f'add_period_{period}_{habit_id}'))
+    keyboard.add(types.InlineKeyboardButton(text='Отмена', callback_data='menu'))
     bot.send_message(call.message.chat.id, "Выберите периодичность привычки:", reply_markup=keyboard)
 
 # Обработчик для выбора периодичности и перехода к вводу количества выполнений
@@ -258,34 +270,45 @@ def handle_repetition_count_input(message):
 
 # ==================================================================================================================
 
+# Удаление привычки =============================================================================================
 # Обработчик для выбора удаления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'del_habit')
 def handle_del_habit(call):
-    user_habit_status = habit_status(call.from_user.id)
-    if not user_habit_status:
-        keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
-        bot.send_message(call.message.chat.id, 'У вас нет активных привычек.', reply_markup=keyboard)
+    user_habits = habit_status(call.from_user.id)
+    if not user_habits:
+        bot.send_message(call.message.chat.id, 'У вас нет активных привычек.', reply_markup=create_inline_keyboard(['menu']))
         return
 
     keyboard = types.InlineKeyboardMarkup()
-    for habit, description in user_habit_status.items():
-        button_text = f"{habit} - {description}"
-        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data='del_' + habit))
+    # Обновленная обработка вывода информации о привычке
+    for habit_name, habit_info in user_habits.items():
+        button_text = f"{habit_name}"
+        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data='del_' + habit_name))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, 'Выберите привычку для удаления:', reply_markup=keyboard)
+
 
 # Обработчик для удаления выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('del_'))
 def delete_selected_habit(call):
-    selected_habit = call.data.split('_')[1]
-    delete_habit(call.from_user.id, selected_habit)
-    bot.send_message(call.message.chat.id, f"Привычка '{selected_habit}' была удалена.")
+    habit_name = call.data.split('_')[1]
+    habit_id = get_habit_id(habit_name)
+    if habit_id:
+        # Передаем user_id и habit_id в функцию удаления, получаем ответное сообщение
+        response_message = delete_habit(call.from_user.id, habit_id)
+        bot.send_message(call.message.chat.id, response_message, reply_markup=create_inline_keyboard(['menu']))
+    else:
+        # Сообщение об ошибке, если ID привычки не найден
+        bot.send_message(call.message.chat.id, f"Ошибка: не удалось найти привычку '{habit_name}'.", reply_markup=create_inline_keyboard(['menu']))
+# ==================================================================================================================
+
 
 # Обработчик для выбора отметки привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
 def handle_mark_habit(call):
     habits_dict = habit_status(call.from_user.id)  # Получаем словарь активных привычек
     if habits_dict is None:
-        keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
+        keyboard = create_inline_keyboard(['status', 'new_habit', 'menu'])
         bot.send_message(call.message.chat.id, 'У вас пока нет активных привычек.', reply_markup=keyboard)
         return
 
@@ -295,6 +318,7 @@ def handle_mark_habit(call):
         button_text = f"{habit_name}"
         callback_data = f'mark_{habit_id}_{habit_name.strip()}'
         keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data=callback_data))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, 'Выберите привычку для отметки:', reply_markup=keyboard)
 
 
