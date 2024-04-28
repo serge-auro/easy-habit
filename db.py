@@ -18,7 +18,7 @@ def init_db():
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS habit (
-            id INTEGER PRIMARY KEY autoincrement NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             name TEXT NOT NULL,
             description TEXT
         )
@@ -26,7 +26,7 @@ def init_db():
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS user_habit (
-            id INTEGER PRIMARY KEY autoincrement NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             user_id INTEGER,
             habit_id INTEGER,
             active BOOLEAN NOT NULL DEFAULT 1,
@@ -41,7 +41,7 @@ def init_db():
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS user_habit_history (
-            id INTEGER PRIMARY KEY autoincrement NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             user_id INTEGER,
             habit_id INTEGER,
             mark_date DATE,
