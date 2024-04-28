@@ -143,9 +143,13 @@ def plot_progress_chart(user_id, period):
 def send_chart(chat_id, period):
     file_path = plot_progress_chart(user_id=chat_id, period = period)
     if not file_path:
-        bot.send_message(chat_id, "У Вас нет подключенных привычек")
+        return None
     else:
-        with open(file_path, 'rb') as photo:
-            period_text = 'неделю' if period == 'week' else 'месяц'
-            bot.send_photo(chat_id, photo, caption=f"Прогресс выполнения привычек за {period_text}")
-    os.remove(file_path) # Удаляем файл с графиком
+        return file_path
+
+
+def delete_sent_file(file_path):
+    try:
+        os.remove(file_path)
+    except OSError as e:
+        print(f"Ошибка при удалении файла {file_path}: {e.strerror}")
