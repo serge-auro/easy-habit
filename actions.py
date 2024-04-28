@@ -285,3 +285,21 @@ def pluralize_count(n):
         return 'раза'
     else:
         return 'раз'
+
+
+# Вспомогательная функция для получения id привычки по её имени
+def get_habit_id(habit_name):
+    with closing(db_connection()) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM habit WHERE name = ?', (habit_name,))
+        result = cur.fetchone()  # Получаем первую запись из результатов запроса
+        return result[0] if result else None
+
+
+# Вспомогательная функция для получения имени привычки по её id
+def get_habit_name(habit_id):
+    with closing(db_connection()) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT name FROM habit WHERE id = ?', (habit_id,))
+        result = cur.fetchone()  # Получаем первую запись из результатов запроса
+        return result[0] if result else None
