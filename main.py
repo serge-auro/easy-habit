@@ -445,6 +445,12 @@ def handle_help(message):
     bot.send_message(message.chat.id, help_message, reply_markup=keyboard)
 
 
+# Отправка сообщения пользователю
+@error_handler
+def user_notify(user_id, message):
+    bot.send_message(user_id, message)
+
+
 # bot.polling(none_stop=True)
 if __name__ == "__main__":
     while True:
