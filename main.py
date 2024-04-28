@@ -42,6 +42,7 @@ def error_handler(func):
             bot.stop_polling()
             time.sleep(5)  # Дайте немного времени перед перезапуском
             # bot.polling(none_stop=True)
+            # TODO вызвать стартовое меню handle_start()
     return wrapper
 
 
@@ -403,6 +404,7 @@ def handle_habits(call):
 
 # Отправка графика по требованию ===============================================================================
 @bot.callback_query_handler(func=lambda call: call.data == 'chart')
+@error_handler
 def handle_chart(call):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Неделя', callback_data='chart_week'))
@@ -412,6 +414,7 @@ def handle_chart(call):
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['chart_week', 'chart_month'])
+@error_handler
 def send_selected_chart(call):
     period = 'week' if 'week' in call.data else 'month'
     result = send_chart(call.message.chat.id, period)
