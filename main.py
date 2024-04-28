@@ -105,7 +105,7 @@ def select_habit_for_report(call):
 @bot.callback_query_handler(
     func=lambda call: call.data.startswith('report_week_') or call.data.startswith('report_month_'))
 def generate_report(call):
-    habit_id = call.data.split('_')[2]
+    habit_id = int(call.data.split('_')[2])
     period = 'week' if 'week' in call.data else 'month'
     user_id = call.from_user.id
     report_result = report(user_id, habit_id, period)
