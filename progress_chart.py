@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import numpy as np
 import os
-import telebot
+
 
 
 
@@ -14,6 +14,7 @@ def fetch_progress_data(user_id, period):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
     today = datetime.now().date()
+    last_day_of_month = None  # Переменная для хранения последнего дня месяца
 
     if period == 'week':
         start_date = today - timedelta(days=today.weekday())  # Понедельник текущей недели
@@ -58,13 +59,13 @@ def fetch_progress_data(user_id, period):
         percentage_done = min((total_done / target) * 100, 100) if target != 0 else 0
         results[name] = {'percentage_done': percentage_done, 'total_done': total_done, 'target': target}
 
-    return results, start_date, end_date
+    return results, start_date, end_date, last_day_of_month
 
 
 def plot_progress_chart(user_id, period):
     if fetch_progress_data(user_id, period) is None:
         return None
-    data, start_date, end_date = fetch_progress_data(user_id, period)
+    data, start_date, end_date, last_day_of_month = fetch_progress_data(user_id, period)
     names = list(data.keys())
     percentages = [data[name]['percentage_done'] for name in names]
 
@@ -81,7 +82,9 @@ def plot_progress_chart(user_id, period):
     ax.invert_yaxis()  # Начинаем снизу
     ax.set_xlabel('Процент выполнения', color = "dimgray", fontweight='bold')
     ax.set_title(
-        f'Прогресс выполнения привычек за {"неделю" if period == "week" else "месяц"} с {start_date} по {end_date}',pad =20, color = "dimgray", fontweight='bold', fontsize = 14)
+        f'Прогресс выполнения привычек за {"неделю" if period == "week" else "месяц"} с {start_date.strftime("%d.%m.%Y")} по {(end_date if period == "week" else last_day_of_month).strftime("%d.%m.%Y")}',
+        pad=20, color="dimgray", fontweight='bold', fontsize=14)
+
     ax.xaxis.set_major_locator(ticker.MultipleLocator(20))
     legend = ax.legend(loc='upper right')  # Перемещаем легенду в правый верхний угол
     for text in legend.get_texts():
@@ -147,26 +150,20 @@ def plot_progress_chart(user_id, period):
 
 
 
-def get_file_path(chat_id, period):
-    file_path = plot_progress_chart(user_id=chat_id, period=period)
-    if not file_path:
-        bot.send_message(chat_id, "У Вас нет подключенных привычек")
-    else:
-        with open(file_path, 'rb') as photo:
-            period_text = 'неделю' if period == 'week' else 'месяц'
-            bot.send_photo(chat_id, photo, caption=f"Прогресс выполнения привычек за {period_text}")
+def get_file_path(user_id, period):
+    file_path = plot_progress_chart(user_id, period)
     return file_path  # Возвращаем file_path для функции удаления
+
+
 
 def delete_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)  # Удаляем файл с графиком
-        print(f"Файл {file_path} успешно удален.")
-    else:
-        print("Файл для удаления не найден.")
+
 
 #Как нам ее вызывать:
 # Отправляем график и получаем путь к файлу
-file_path = get_file_path(chat_id, period)
+#file_path = get_file_path(user_id, period)
 # Если график построен и путь к файлу есть, то удаляем его
-if file_path:
-    delete_file(file_path)
+#if file_path:
+ #   delete_file(file_path)
