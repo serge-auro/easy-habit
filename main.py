@@ -1,5 +1,5 @@
 import telebot
-import json
+from progress_chart import *
 from telebot import types
 from config import BOT_TOKEN
 from actions import *
@@ -24,7 +24,8 @@ buttons_dict = {
     'new_habit': 'Добавить',
     'del_habit': 'Удалить',
     'mark_habit': 'Отметить V',
-    'habits': 'Привычки'
+    'habits': 'Привычки',
+    'chart': 'График'
 }
 
 # Функция для создания inline клавиатуры
@@ -44,7 +45,7 @@ def handle_menu(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'status')
 def handle_status(call):
     habits_info = habit_status(call.from_user.id)
-    keyboard = create_inline_keyboard(['edit_menu', 'mark_habit', 'report', 'menu'])
+    keyboard = create_inline_keyboard(['edit_menu', 'mark_habit', 'report', 'chart', 'menu'])
 
     if not habits_info:
         keyboard = create_inline_keyboard(['new_habit', 'menu'])
@@ -357,6 +358,26 @@ def handle_habits(call):
     respond_message = list_habits()
     keyboard = create_inline_keyboard(['new_habit', 'edit_habit', 'del_habit', 'menu'])
     bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
+
+
+# Отправка графика по требованию ===============================================================================
+@bot.callback_query_handler(func=lambda call: call.data == 'chart')
+def handle_chart(call):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Неделя', callback_data='chart_week'))
+    keyboard.add(types.InlineKeyboardButton(text='Месяц', callback_data='chart_month'))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
+    bot.send_message(call.message.chat.id, 'Выберите период для отображения графика:', reply_markup=keyboard)
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ['chart_week', 'chart_month'])
+def send_selected_chart(call):
+    period = 'week' if 'week' in call.data else 'month'
+    result = send_chart(call.message.chat.id, period)
+    if result is None:
+        bot.send_message(call.message.chat.id, "Нет данных для отображения графика.")
+    bot.answer_callback_query(call.id)
+# ==============================================================================================================
 
 
 # Обработчик для команды /start
