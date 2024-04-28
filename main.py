@@ -5,8 +5,12 @@ from config import BOT_TOKEN
 from actions import *
 from db import *
 from report import report
+import time
+from datetime import datetime
 
 init_db()
+
+print("bot is being started", datetime.now())
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -27,21 +31,39 @@ buttons_dict = {
     'habits': 'Привычки'
 }
 
+
+def error_handler(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(f"Error in {func.__name__}: {e}")
+            bot.stop_polling()
+            time.sleep(5)  # Дайте немного времени перед перезапуском
+            # bot.polling(none_stop=True)
+    return wrapper
+
+
 # Функция для создания inline клавиатуры
+@error_handler
 def create_inline_keyboard(button_keys):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     buttons = [types.InlineKeyboardButton(text=buttons_dict[key], callback_data=key) for key in button_keys if key in buttons_dict]
     keyboard.add(*buttons)
     return keyboard
 
+
 # Обработчик для возврата в главное меню
 @bot.callback_query_handler(func=lambda call: call.data == 'menu')
+@error_handler
 def handle_menu(call):
     keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
     bot.send_message(call.message.chat.id, 'На главную', reply_markup=keyboard)
 
+
 # Обработчик для вывода статуса текущих привычек
 @bot.callback_query_handler(func=lambda call: call.data == 'status')
+@error_handler
 def handle_status(call):
     habits_info = habit_status(call.from_user.id)
     keyboard = create_inline_keyboard(['edit_menu', 'mark_habit', 'report', 'menu'])
@@ -62,6 +84,7 @@ def handle_status(call):
 
 # Обработчик для меню редактирования
 @bot.callback_query_handler(func=lambda call: call.data == 'edit_menu')
+@error_handler
 def handle_edit_menu(call):
     keyboard = create_inline_keyboard(['edit_habit', 'new_habit', 'del_habit', 'menu'])
     bot.send_message(call.message.chat.id, 'Выберите действие', reply_markup=keyboard)
@@ -69,6 +92,7 @@ def handle_edit_menu(call):
 
 # Обработчик для вывода отчета
 @bot.callback_query_handler(func=lambda call: call.data == 'report')
+@error_handler
 def handle_report(call):
     user_habits = habit_status(call.from_user.id)
     if not user_habits:
@@ -89,9 +113,9 @@ def handle_report(call):
     bot.send_message(call.message.chat.id, 'Выберите привычку для создания отчета:', reply_markup=keyboard)
 
 
-
 # Обработчик для выбора привычки и запроса периода
 @bot.callback_query_handler(func=lambda call: call.data.startswith('report_select_'))
+@error_handler
 def select_habit_for_report(call):
     habit_id = call.data.split('_')[2]
     keyboard = types.InlineKeyboardMarkup()
@@ -104,6 +128,7 @@ def select_habit_for_report(call):
 # Обработчик для генерации отчета
 @bot.callback_query_handler(
     func=lambda call: call.data.startswith('report_week_') or call.data.startswith('report_month_'))
+@error_handler
 def generate_report(call):
     habit_id = int(call.data.split('_')[2])
     period = 'week' if 'week' in call.data else 'month'
@@ -119,9 +144,11 @@ def generate_report(call):
                          f"Количество выполнений: {report_result['Completion Count']}"
         bot.send_message(call.message.chat.id, report_message, reply_markup = create_inline_keyboard(['menu']))
 
+
 # Редактирование активной привычки ===================================================================
 # Обработчик для вызова колбэка по изменению привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'edit_habit')
+@error_handler
 def handle_edit_habit(call):
     user_id = call.from_user.id  # Получаем ID пользователя, который инициировал вызов
     habits_info = habit_status(user_id)  # Получаем информацию о привычках пользователя
@@ -138,8 +165,10 @@ def handle_edit_habit(call):
     keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, "Выберите привычку для редактирования:", reply_markup=keyboard)
 
+
 # Обработчик для выбора привычки к редактированию
 @bot.callback_query_handler(func=lambda call: call.data.startswith('edit_select_'))
+@error_handler
 def select_habit_for_editing(call):
     habit_name = call.data.split('_')[2]
     habit_id = get_habit_id(habit_name)  # Получаем ID привычки по её названию
@@ -159,6 +188,7 @@ def select_habit_for_editing(call):
 
 # Обработчик для выбора новой периодичности привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('edit_period_'))
+@error_handler
 def select_new_period(call):
     parts = call.data.split('_')  # Разбиваем данные вызова на части
     period = parts[2]  # Получаем выбранную периодичность
@@ -173,6 +203,7 @@ def select_new_period(call):
 
 # Обработчик для ввода нового количества выполнений
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите новое количество выполнений"))
+@error_handler
 def handle_repetition_count_input(message):
     raw_session_data = get_user_session(message.chat.id)
     if raw_session_data:
@@ -199,6 +230,7 @@ def handle_repetition_count_input(message):
 # Добавление новой привычки ======================================================================================
 # Обработчик для начала процесса добавления новой привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'new_habit')
+@error_handler
 def handle_new_habit(call):
     # Получаем список привычек для пользователя
     habits_list_str = list_habits()  # Функция возвращает строку с описаниями привычек
@@ -219,6 +251,7 @@ def handle_new_habit(call):
 
 # Обработчик для выбора привычки и перехода к выбору периодичности
 @bot.callback_query_handler(func=lambda call: call.data.startswith('add_select_'))
+@error_handler
 def select_habit_for_addition(call):
     habit_id = call.data.split('_')[2]
     state = 'selecting_habit'  # Устанавливаем состояние сессии
@@ -231,8 +264,10 @@ def select_habit_for_addition(call):
     keyboard.add(types.InlineKeyboardButton(text='Отмена', callback_data='menu'))
     bot.send_message(call.message.chat.id, "Выберите периодичность привычки:", reply_markup=keyboard)
 
+
 # Обработчик для выбора периодичности и перехода к вводу количества выполнений
 @bot.callback_query_handler(func=lambda call: call.data.startswith('add_period_'))
+@error_handler
 def select_period(call):
     parts = call.data.split('_')
     if len(parts) < 4:
@@ -251,6 +286,7 @@ def select_period(call):
 
 # Обработчик для текстового ввода количества выполнений
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text.startswith("Введите количество выполнений"))
+@error_handler
 def handle_repetition_count_input(message):
     raw_session_data = get_user_session(message.chat.id)
     if raw_session_data:
@@ -268,11 +304,12 @@ def handle_repetition_count_input(message):
     else:
         bot.send_message(message.chat.id, "Сессия не найдена или истекло время ожидания. Пожалуйста, начните заново.")
 
-# ==================================================================================================================
 
+# ==================================================================================================================
 # Удаление привычки =============================================================================================
 # Обработчик для выбора удаления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'del_habit')
+@error_handler
 def handle_del_habit(call):
     user_habits = habit_status(call.from_user.id)
     if not user_habits:
@@ -290,6 +327,7 @@ def handle_del_habit(call):
 
 # Обработчик для удаления выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('del_'))
+@error_handler
 def delete_selected_habit(call):
     habit_name = call.data.split('_')[1]
     habit_id = get_habit_id(habit_name)
@@ -305,6 +343,7 @@ def delete_selected_habit(call):
 
 # Обработчик для выбора отметки привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
+@error_handler
 def handle_mark_habit(call):
     habits_dict = habit_status(call.from_user.id)  # Получаем словарь активных привычек
     if habits_dict is None:
@@ -324,6 +363,7 @@ def handle_mark_habit(call):
 
 # Обработчик для отметки выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('mark_'))
+@error_handler
 def mark_selected_habit(call):
     # Разделяем callback_data для получения habit_id
     parts = call.data.split('_')
@@ -353,6 +393,7 @@ def mark_selected_habit(call):
 
 # Обработчики для вывода списка всех привычек (предустановленных)
 @bot.callback_query_handler(func=lambda call: call.data == 'habits')
+@error_handler
 def handle_habits(call):
     respond_message = list_habits()
     keyboard = create_inline_keyboard(['new_habit', 'edit_habit', 'del_habit', 'menu'])
@@ -361,6 +402,7 @@ def handle_habits(call):
 
 # Обработчик для команды /start
 @bot.message_handler(commands=['start'])
+@error_handler
 def handle_start(message):
     try:
         init_user(message.chat.id)
@@ -373,9 +415,17 @@ def handle_start(message):
 
 # Обработчик для команды /help
 @bot.message_handler(commands=['help'])
+@error_handler
 def handle_help(message):
     keyboard = create_inline_keyboard(['status', 'habits', 'mark_habit'])
     bot.send_message(message.chat.id, help_message, reply_markup=keyboard)
 
 
-bot.polling(none_stop=True)
+# bot.polling(none_stop=True)
+if __name__ == "__main__":
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(1)
