@@ -270,28 +270,38 @@ def handle_repetition_count_input(message):
 
 # ==================================================================================================================
 
+# Удаление привычки =============================================================================================
 # Обработчик для выбора удаления привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'del_habit')
 def handle_del_habit(call):
-    user_habit_status = habit_status(call.from_user.id)
-    if not user_habit_status:
-        keyboard = create_inline_keyboard(['status', 'new_habit', 'menu'])
-        bot.send_message(call.message.chat.id, 'У вас нет активных привычек.', reply_markup=keyboard)
+    user_habits = habit_status(call.from_user.id)
+    if not user_habits:
+        bot.send_message(call.message.chat.id, 'У вас нет активных привычек.', reply_markup=create_inline_keyboard(['menu']))
         return
 
     keyboard = types.InlineKeyboardMarkup()
-    for habit, description in user_habit_status.items():
-        button_text = f"{habit} - {description}"
-        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data='del_' + habit))
+    # Обновленная обработка вывода информации о привычке
+    for habit_name, habit_info in user_habits.items():
+        button_text = f"{habit_name}"
+        keyboard.add(types.InlineKeyboardButton(text=button_text, callback_data='del_' + habit_name))
     keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
     bot.send_message(call.message.chat.id, 'Выберите привычку для удаления:', reply_markup=keyboard)
+
 
 # Обработчик для удаления выбранной привычки
 @bot.callback_query_handler(func=lambda call: call.data.startswith('del_'))
 def delete_selected_habit(call):
-    selected_habit = call.data.split('_')[1]
-    delete_habit(call.from_user.id, selected_habit)
-    bot.send_message(call.message.chat.id, f"Привычка '{selected_habit}' была удалена.", reply_markup=create_inline_keyboard(['menu']))
+    habit_name = call.data.split('_')[1]
+    habit_id = get_habit_id(habit_name)
+    if habit_id:
+        # Передаем user_id и habit_id в функцию удаления, получаем ответное сообщение
+        response_message = delete_habit(call.from_user.id, habit_id)
+        bot.send_message(call.message.chat.id, response_message, reply_markup=create_inline_keyboard(['menu']))
+    else:
+        # Сообщение об ошибке, если ID привычки не найден
+        bot.send_message(call.message.chat.id, f"Ошибка: не удалось найти привычку '{habit_name}'.", reply_markup=create_inline_keyboard(['menu']))
+# ==================================================================================================================
+
 
 # Обработчик для выбора отметки привычки
 @bot.callback_query_handler(func=lambda call: call.data == 'mark_habit')
