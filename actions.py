@@ -54,7 +54,7 @@ def assign_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
         count_word = "раза"
     else:
         count_word = "раз"
-    frequency_text = "в день" if frequency_name == "daily" else "в неделю" if frequency_name == "weekly" else "в месяц" if frequency_name == "monthly" else "в неопределённый период"
+    frequency_text = "в день" if frequency_name == "ежедневно" else "в неделю" if frequency_name == "еженедельно" else "в месяц" if frequency_name == "ежемесячно" else "в неопределённый период"
 
     message_text = f"Вы добавили себе привычку '{habit_name}', которую хотите выполнять {frequency_count} {count_word} {frequency_text}."
 
