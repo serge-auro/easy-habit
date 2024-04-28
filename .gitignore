@@ -160,3 +160,4 @@ cython_debug/
 .idea/
 
 config.py
+easy_habit.db
