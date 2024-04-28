@@ -3,33 +3,39 @@ from datetime import datetime, timedelta
 
 
 def report(user_id, habit_id, period):
-    conn = sqlite3.connect('easy_habit.db')
-    cur = conn.cursor()
-    today = datetime.now()
+    try:
+        conn = sqlite3.connect('easy_habit.db')
+        cur = conn.cursor()
+        today = datetime.now()
 
-    # Определение начальной даты для периода
-    if period == 'week':
-        start_of_week = today - timedelta(days=today.weekday())  # Начало текущей недели (понедельник)
-        start_date = start_of_week.strftime('%Y-%m-%d')
-    elif period == 'month':
-        start_of_month = today.replace(day=1)  # Начало текущего месяца
-        start_date = start_of_month.strftime('%Y-%m-%d')
+        # Определение начальной даты для периода
+        if period == 'week':
+            start_of_week = today - timedelta(days=today.weekday())  # Начало текущей недели (понедельник)
+            start_date = start_of_week.strftime('%Y-%m-%d')
+        elif period == 'month':
+            start_of_month = today.replace(day=1)  # Начало текущего месяца
+            start_date = start_of_month.strftime('%Y-%m-%d')
 
-    # Завершающая дата — текущий день
-    end_date = today.strftime('%Y-%m-%d')
+        # Завершающая дата — текущий день
+        end_date = today.strftime('%Y-%m-%d')
 
-    # Выборка данных из базы
-    query = '''
-            SELECT h.name, COUNT(*) as completion_count
-            FROM user_habit_history uhh
-            JOIN user_habit uh ON uh.habit_id = uhh.habit_id AND uh.user_id = uhh.user_id and uh.active = 1
-            JOIN habit h ON h.id = uh.habit_id
-            WHERE uhh.mark_date BETWEEN ? AND ? AND uh.user_id = ? AND uh.habit_id = ?
-            GROUP BY uh.habit_id
-        '''
-    cur.execute(query, (start_date, end_date, user_id, habit_id))
-    result = cur.fetchone()
-    conn.close()
+        # Выборка данных из базы
+        query = '''
+                SELECT h.name, COUNT(*) as completion_count
+                FROM user_habit_history uhh
+                JOIN user_habit uh ON uh.habit_id = uhh.habit_id AND uh.user_id = uhh.user_id and uh.active = 1
+                JOIN habit h ON h.id = uh.habit_id
+                WHERE uhh.mark_date BETWEEN ? AND ? AND uh.user_id = ? AND uh.habit_id = ?
+                GROUP BY uh.habit_id
+            '''
+        cur.execute(query, (start_date, end_date, user_id, habit_id))
+        result = cur.fetchone()
+    except sqlite3.DatabaseError as e:
+        print(f"An error occurred: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
     # Формируем и возвращаем отчет
     if not result:
