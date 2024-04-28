@@ -130,7 +130,7 @@ def habit_status(user_id):
 def edit_habit(user_id, habit_id, frequency_name: FREQUENCY, frequency_count):
     conn = sqlite3.connect('easy_habit.db')
     cur = conn.cursor()
-    cur.execute("UPDATE user_habit SET frequency_name = ?, frequency_count = ? WHERE user_id = ? AND habit_id = ?",
+    cur.execute("UPDATE user_habit SET frequency_name = ?, frequency_count = ?, active = 1 WHERE user_id = ? AND habit_id = ?",
                 (frequency_name, frequency_count, user_id, habit_id))
     cur.execute("SELECT name FROM habit WHERE id = ?", (habit_id,))
     habit_name = cur.fetchone()[0]
