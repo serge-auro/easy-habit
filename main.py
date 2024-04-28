@@ -43,7 +43,7 @@ def handle_menu(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'status')
 def handle_status(call):
     habits_info = habit_status(call.from_user.id)
-    keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'menu'])
+    keyboard = create_inline_keyboard(['edit_habit', 'mark_habit', 'report', 'menu'])
 
     if not habits_info:
         keyboard = create_inline_keyboard(['new_habit', 'menu'])
@@ -56,7 +56,7 @@ def handle_status(call):
         f"{habit} - {info['description']} {info['frequency']} {info['count']} {pluralize_count(info['count'])}"
         for habit, info in habits_info.items()
     ])
-    bot.send_message(call.message.chat.id, respond_message, reply_markup=keyboard)
+    bot.send_message(call.message.chat.id, f'Привычки, которые вы отслеживаете:\n\n{respond_message}', reply_markup=keyboard)
 
 
 # Обработчик для вывода отчета
@@ -101,7 +101,7 @@ def generate_report(call):
         report_message = f"Привычка: {report_result['Habit Name']}\n" \
                          f"Период: с {report_result['Period Start']} по {report_result['Period End']}\n" \
                          f"Количество выполнений: {report_result['Completion Count']}"
-        bot.send_message(call.message.chat.id, report_message)
+        bot.send_message(call.message.chat.id, report_message, reply_markup = create_inline_keyboard(['menu']))
 
 # Редактирование активной привычки ===================================================================
 # Обработчик для вызова колбэка по изменению привычки
@@ -309,13 +309,13 @@ def mark_selected_habit(call):
         # Обработка ответа от функции mark_habit
         if response == "OK":
             success_message = f"Привычка '{habit_name}' успешно отмечена как выполненная!"
-            bot.send_message(call.message.chat.id, success_message)
+            bot.send_message(call.message.chat.id, success_message, reply_markup=create_inline_keyboard(['menu']))
         else:
             error_message = "Извините, не смог отметить - что-то пошло не так."
-            bot.send_message(call.message.chat.id, error_message)
+            bot.send_message(call.message.chat.id, error_message, reply_markup=create_inline_keyboard(['menu']))
     else:
         error_message = "Не удалось получить название привычки. Пожалуйста, попробуйте ещё раз."
-        bot.send_message(call.message.chat.id, error_message)
+        bot.send_message(call.message.chat.id, error_message, reply_markup=create_inline_keyboard(['menu']))
 
     bot.answer_callback_query(call.id)
 
