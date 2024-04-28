@@ -417,9 +417,18 @@ def handle_chart(call):
 @error_handler
 def send_selected_chart(call):
     period = 'week' if 'week' in call.data else 'month'
-    result = send_chart(call.message.chat.id, period)
-    if result is None:
+    file_path = get_file_path(call.message.chat.id, period)
+    if file_path is None:
         bot.send_message(call.message.chat.id, "Нет данных для отображения графика.")
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+        back_button = types.InlineKeyboardButton(text='Назад', callback_data='menu')
+        keyboard.add(back_button)
+
+        with open(file_path, 'rb') as photo:
+            bot.send_photo(call.message.chat.id, photo, reply_markup=keyboard)
+        delete_file(file_path)  # Удаление файла после отправки
+
     bot.answer_callback_query(call.id)
 # ==============================================================================================================
 
