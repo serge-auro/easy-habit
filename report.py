@@ -21,7 +21,7 @@ def report(user_id, habit_id, period):
     query = '''
             SELECT h.name, COUNT(*) as completion_count
             FROM user_habit_history uhh
-            JOIN user_habit uh ON uh.habit_id = uhh.habit_id
+            JOIN user_habit uh ON uh.habit_id = uhh.habit_id AND uh.user_id = uhh.user_id
             JOIN habit h ON h.id = uh.habit_id
             WHERE uhh.mark_date BETWEEN ? AND ? AND uh.user_id = ? AND uh.habit_id = ?
             GROUP BY uh.habit_id
