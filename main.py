@@ -62,17 +62,24 @@ def handle_status(call):
 # Обработчик для вывода отчета
 @bot.callback_query_handler(func=lambda call: call.data == 'report')
 def handle_report(call):
-    # Запрос списка привычек пользователя для выбора
-    user_habits = habit_status(
-        call.from_user.id)  # Предполагается, что функция возвращает словарь {habit_id: habit_name}
+    user_habits = habit_status(call.from_user.id)
     if not user_habits:
-        bot.send_message(call.message.chat.id, 'У вас нет активных привычек для создания отчета.')
+        bot.send_message(call.message.chat.id, 'У вас нет активных привычек для создания отчета.', reply_markup=create_inline_keyboard(['menu']))
         return
 
     keyboard = types.InlineKeyboardMarkup()
-    for habit_id, habit_name in user_habits.items():
-        keyboard.add(types.InlineKeyboardButton(text=habit_name, callback_data=f'report_select_{habit_id}'))
+    for habit_name, info in user_habits.items():
+        # Проверяем, что habit_name является строкой и получаем habit_id
+        if isinstance(habit_name, str):
+            habit_id = get_habit_id(habit_name)
+            if habit_id:
+                keyboard.add(types.InlineKeyboardButton(text=habit_name, callback_data=f'report_select_{habit_id}'))
+            else:
+                print(f"Ошибка: ID привычки не найден для {habit_name}")
+        else:
+            print(f"Ошибка: название привычки не является строкой для {habit_name}")
     bot.send_message(call.message.chat.id, 'Выберите привычку для создания отчета:', reply_markup=keyboard)
+
 
 
 # Обработчик для выбора привычки и запроса периода
