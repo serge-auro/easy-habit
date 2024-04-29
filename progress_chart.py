@@ -1,10 +1,11 @@
+from calendar import monthrange
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import sqlite3
 from datetime import datetime, timedelta
 import numpy as np
 import os
-
+import telebot
 
 
 
@@ -20,6 +21,8 @@ def fetch_progress_data(user_id, period):
     elif period == 'month':
         start_date = today.replace(day=1)  # Первый день текущего месяца
         end_date = today
+        days_in_month = monthrange(today.year, today.month)[1]  # количество дней в месяце
+        last_day_of_month = start_date.replace(day=days_in_month)  # Последний день текущего месяца
 
     cur.execute('''
         SELECT habit.id, habit.name, user_habit.frequency_name, user_habit.frequency_count, 
@@ -41,8 +44,10 @@ def fetch_progress_data(user_id, period):
     results = {}
     for habit in habits:
         habit_id, name, freq_name, freq_count, total_done = habit
-        if freq_name == 'ежедневно':
+        if freq_name == 'ежедневно' and period == 'week':
             target = (end_date - start_date).days * freq_count
+        elif freq_name == 'ежедневно' and period == 'month':
+            target = ((last_day_of_month - start_date).days+1) * freq_count
         elif freq_name == 'еженедельно' and period == 'week':
             target = freq_count
         elif freq_name == 'еженедельно' and period == 'month':
@@ -50,7 +55,7 @@ def fetch_progress_data(user_id, period):
         elif freq_name == 'ежемесячно':
             target = freq_count
 
-        percentage_done = (total_done / target) * 100 if target != 0 else 0
+        percentage_done = min((total_done / target) * 100, 100) if target != 0 else 0
         results[name] = {'percentage_done': percentage_done, 'total_done': total_done, 'target': target}
 
     return results, start_date, end_date
@@ -140,12 +145,16 @@ def plot_progress_chart(user_id, period):
     return full_file_path
 
 
-def send_chart(chat_id, period):
-    file_path = plot_progress_chart(user_id=chat_id, period = period)
+def get_file_path(chat_id, period):
+    file_path = plot_progress_chart(user_id=chat_id, period=period)
     if not file_path:
-        bot.send_message(chat_id, "У Вас нет подключенных привычек")
+        return
     else:
-        with open(file_path, 'rb') as photo:
-            period_text = 'неделю' if period == 'week' else 'месяц'
-            bot.send_photo(chat_id, photo, caption=f"Прогресс выполнения привычек за {period_text}")
-    os.remove(file_path) # Удаляем файл с графиком
+        return file_path
+
+
+def delete_file(file_path):
+    try:
+        os.remove(file_path)
+    except OSError:
+        pass

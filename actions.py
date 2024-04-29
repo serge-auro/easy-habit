@@ -330,3 +330,12 @@ def get_habit_name(habit_id):
         cur.execute('SELECT name FROM habit WHERE id = ?', (habit_id,))
         result = cur.fetchone()  # Получаем первую запись из результатов запроса
         return result[0] if result else None
+
+
+def get_all_active_users():
+    with closing(db_connection()) as conn:
+        cur = conn.cursor()
+
+        cur.execute("SELECT id FROM user WHERE active = 1")
+        active_users = cur.fetchall()
+        return active_users
