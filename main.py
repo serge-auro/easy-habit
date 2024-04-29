@@ -55,6 +55,27 @@ def create_inline_keyboard(button_keys):
     return keyboard
 
 
+def send_custom_message_to_all_active_users():
+    active_users = get_all_active_users()
+    menu_keyboard = create_inline_keyboard(['status', 'edit_habit', 'mark_habit'])
+
+    for user_id_tuple in active_users:
+        user_id = user_id_tuple[0]  # предполагается, что user_id это первый элемент кортежа
+        try:
+            habits_info = habit_status(user_id)
+            if not habits_info:
+                message_text = "У вас нет активных привычек. Начните добавлять привычки!"
+            else:
+                message_text = "Ваши текущие привычки:\n" + "\n".join([
+                    f"{habit} - {info['description']} {info['frequency']}x в {info['frequency']} {pluralize_count(info['count'])}"
+                    for habit, info in habits_info.items()
+                ])
+
+            bot.send_message(user_id, message_text, reply_markup=menu_keyboard)
+        except Exception as e:
+            print(f"Не удалось отправить сообщение пользователю {user_id}: {e}")
+
+
 # Обработчик для возврата в главное меню
 @bot.callback_query_handler(func=lambda call: call.data == 'menu')
 @error_handler
