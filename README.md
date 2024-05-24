@@ -14,7 +14,14 @@
 
 
 ### Credits
-- Developed by team members...
+- Developed by: aureolu@gmail.com
+pustokhin@gmail.com
+fleurykristina@gmail.com
+lan2002@yandex.ru
+gokhfeld.ev@gmail.com
+karimov.tam@gmail.com
+ogonkov.aleksei@gmail.com
+nazgulzhusupova0@gmail.com
 
 ### License
 This project is licensed under the [Apache-2.0 license](http://www.apache.org/licenses).
